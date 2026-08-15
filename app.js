@@ -30,6 +30,21 @@ function safeStorageGet(key){
 function safeStorageSet(key,value){const v=String(value);storageCache[key]=v;idbStoreSet(key,v);try{localStorage.setItem(key,v)}catch(e){console.warn('localStorage full; using IndexedDB for',key)}}
 function safeStorageRemove(key){delete storageCache[key];idbStoreRemove(key);try{localStorage.removeItem(key)}catch(e){}}
 
+// v1.9.22: 壊れた端末保存データがあっても同期全体を止めない。
+function readStoredArray(key){
+ const raw=safeStorageGet(key);
+ if(raw===null||raw===undefined||raw==='')return [];
+ try{
+  const value=JSON.parse(raw);
+  if(Array.isArray(value))return value;
+  throw new Error('stored value is not an array');
+ }catch(err){
+  console.warn('Invalid stored data reset',key,err);
+  safeStorageSet(key,'[]');
+  return [];
+ }
+}
+
 const state={data:null,markets:null,marketPeriod:'1m',marketSymbol:'NIKKEI',liveMarketSymbol:'NIKKEI',filter:'all',lifeFilter:'all',choices:{},backend:safeStorageGet('mc_backend')||'',syncToken:safeStorageGet('mc_sync_token')||'',syncTimer:null,syncBusy:false,lastSync:null,speechRun:0,speechPaused:false,speechOwner:null,sectionSpeechEl:null,audio:null,audioQueue:[],audioIndex:0,coachCancel:null,coachBusy:false};
 const DEMO={
  generatedAt:new Date().toISOString(),
@@ -551,14 +566,14 @@ function renderCause(){const map=(state.data?.cause&&state.data.cause.length?sta
  ['#yenWeakList','#yenStrongList'].forEach(sel=>{const panel=$(sel)?.closest('.panel');if(!panel)return;panel.querySelector('.read-aloud-controls')?.remove();delete panel.dataset.readAloudReady;addReadAloudControls(panel)});
 }
 function renderRoadmap(){const done=Number(safeStorageGet('mc_term_count')||0);const current=done>18?2:1;$('#roadmap').innerHTML=roadmap.map(r=>`<article class="road-stage ${r.n===current?'current':''}"><div class="road-num">${r.n}</div><div><h3>${esc(r.title)}</h3><div class="eyebrow">目安 ${r.period}</div><ul>${r.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><span class="badge">${r.n<current?'修了':r.n===current?'現在地':'これから'}</span></article>`).join('')}
-function renderTerms(){const learned=JSON.parse(safeStorageGet('mc_terms')||'[]');const q=($('#termSearch')?.value||'').trim().toLowerCase();const list=terms.filter(t=>!q||t.join(' ').toLowerCase().includes(q));$('#termGrid').innerHTML=list.map(([name,desc])=>`<article class="term"><h3>${esc(name)}</h3><p>${esc(desc)}</p><button data-term="${esc(name)}" class="${learned.includes(name)?'done':''}">${learned.includes(name)?'✓ 覚えた':'覚えた'}</button></article>`).join('');$$('#termGrid button').forEach(b=>b.onclick=()=>toggleTerm(b.dataset.term));}
-function toggleTerm(name){let a=JSON.parse(safeStorageGet('mc_terms')||'[]');const learned=!a.includes(name);a=learned?[...a,name]:a.filter(x=>x!==name);safeStorageSet('mc_terms',JSON.stringify(a));safeStorageSet('mc_term_count',a.length);renderTerms();loadLocalStats();renderRoadmap();cloudWrite('setTerm',{name,learned:learned?'1':'0'})}
-function savePrediction(market){const choice=state.choices[market];if(!choice)return toast('まず方向を選んでください');const reason=$('#reason'+market).value.trim().slice(0,500);if(reason.length<3)return toast('理由を一言書いてください');const rec={id:Date.now(),date:new Date().toISOString(),market,choice,reason,confidence:Number($('#confidence'+market).value)};const arr=JSON.parse(safeStorageGet('mc_predictions')||'[]');arr.unshift(rec);safeStorageSet('mc_predictions',JSON.stringify(arr.slice(0,200)));markStudyDay();loadPredictions();loadLocalStats();cloudWrite('savePrediction',rec);toast('予想を保存しました。PC/スマホへ同期します')}
-function loadPredictions(){const arr=JSON.parse(safeStorageGet('mc_predictions')||'[]');$('#predictionHistory').innerHTML=arr.slice(0,8).map(x=>`<div class="history-row"><div><b>${x.market}</b> → ${esc(x.choice)} <small>自信${x.confidence}/5</small><br><small>${esc(x.reason)}</small></div><time>${fmt(x.date)}</time></div>`).join('')||'<p>まだ予想はありません。最初は当てる必要はありません。</p>'}
-function saveJournal(){const note=$('#journalNote').value.trim().slice(0,500),learn=$('#journalLearn').value.trim().slice(0,500),next=$('#journalNext').value.trim().slice(0,300);if(!note&&!learn&&!next)return toast('何か1つだけでも書いてください');const rec={id:Date.now(),date:new Date().toISOString(),note,learn,next};const arr=JSON.parse(safeStorageGet('mc_journal')||'[]');arr.unshift(rec);safeStorageSet('mc_journal',JSON.stringify(arr.slice(0,180)));$('#journalNote').value=$('#journalLearn').value=$('#journalNext').value='';markStudyDay();loadJournal();loadLocalStats();cloudWrite('saveJournal',rec);toast('今日の学びを保存しました。PC/スマホへ同期します')}
-function loadJournal(){const arr=JSON.parse(safeStorageGet('mc_journal')||'[]');$('#journalHistory').innerHTML=arr.slice(0,20).map(x=>`<article class="journal-entry"><time>${fmt(x.date)}</time>${x.note?`<p><b>気になったこと</b><br>${esc(x.note)}</p>`:''}${x.learn?`<p><b>わかったこと</b><br>${esc(x.learn)}</p>`:''}${x.next?`<p><b>次に確認</b><br>${esc(x.next)}</p>`:''}</article>`).join('')}
-function markStudyDay(){let a=JSON.parse(safeStorageGet('mc_days')||'[]');const d=new Date().toISOString().slice(0,10);if(!a.includes(d)){a.push(d);safeStorageSet('mc_days',JSON.stringify(a));cloudWrite('markStudyDay',{day:d})}}
-function loadLocalStats(){const days=JSON.parse(safeStorageGet('mc_days')||'[]');const p=JSON.parse(safeStorageGet('mc_predictions')||'[]');const t=JSON.parse(safeStorageGet('mc_terms')||'[]');$('#studyDays').textContent=days.length;$('#predictionCount').textContent=p.length;$('#termProgress').textContent=t.length;const pct=Math.min(100,Math.round((t.length/terms.length)*60+Math.min(days.length,30)/30*40));$('#levelPct').textContent=pct+'%';$('#levelBar').style.width=pct+'%';$('#stageName').textContent=pct>=90?'LEVEL 2 経済連結':'LEVEL 1 基礎'}
+function renderTerms(){const learned=readStoredArray('mc_terms');const q=($('#termSearch')?.value||'').trim().toLowerCase();const list=terms.filter(t=>!q||t.join(' ').toLowerCase().includes(q));$('#termGrid').innerHTML=list.map(([name,desc])=>`<article class="term"><h3>${esc(name)}</h3><p>${esc(desc)}</p><button data-term="${esc(name)}" class="${learned.includes(name)?'done':''}">${learned.includes(name)?'✓ 覚えた':'覚えた'}</button></article>`).join('');$$('#termGrid button').forEach(b=>b.onclick=()=>toggleTerm(b.dataset.term));}
+function toggleTerm(name){let a=readStoredArray('mc_terms');const learned=!a.includes(name);a=learned?[...a,name]:a.filter(x=>x!==name);safeStorageSet('mc_terms',JSON.stringify(a));safeStorageSet('mc_term_count',a.length);renderTerms();loadLocalStats();renderRoadmap();cloudWrite('setTerm',{name,learned:learned?'1':'0'})}
+function savePrediction(market){const choice=state.choices[market];if(!choice)return toast('まず方向を選んでください');const reason=$('#reason'+market).value.trim().slice(0,500);if(reason.length<3)return toast('理由を一言書いてください');const rec={id:Date.now(),date:new Date().toISOString(),market,choice,reason,confidence:Number($('#confidence'+market).value)};const arr=readStoredArray('mc_predictions');arr.unshift(rec);safeStorageSet('mc_predictions',JSON.stringify(arr.slice(0,200)));markStudyDay();loadPredictions();loadLocalStats();cloudWrite('savePrediction',rec);toast('予想を保存しました。PC/スマホへ同期します')}
+function loadPredictions(){const arr=readStoredArray('mc_predictions');$('#predictionHistory').innerHTML=arr.slice(0,8).map(x=>`<div class="history-row"><div><b>${x.market}</b> → ${esc(x.choice)} <small>自信${x.confidence}/5</small><br><small>${esc(x.reason)}</small></div><time>${fmt(x.date)}</time></div>`).join('')||'<p>まだ予想はありません。最初は当てる必要はありません。</p>'}
+function saveJournal(){const note=$('#journalNote').value.trim().slice(0,500),learn=$('#journalLearn').value.trim().slice(0,500),next=$('#journalNext').value.trim().slice(0,300);if(!note&&!learn&&!next)return toast('何か1つだけでも書いてください');const rec={id:Date.now(),date:new Date().toISOString(),note,learn,next};const arr=readStoredArray('mc_journal');arr.unshift(rec);safeStorageSet('mc_journal',JSON.stringify(arr.slice(0,180)));$('#journalNote').value=$('#journalLearn').value=$('#journalNext').value='';markStudyDay();loadJournal();loadLocalStats();cloudWrite('saveJournal',rec);toast('今日の学びを保存しました。PC/スマホへ同期します')}
+function loadJournal(){const arr=readStoredArray('mc_journal');$('#journalHistory').innerHTML=arr.slice(0,20).map(x=>`<article class="journal-entry"><time>${fmt(x.date)}</time>${x.note?`<p><b>気になったこと</b><br>${esc(x.note)}</p>`:''}${x.learn?`<p><b>わかったこと</b><br>${esc(x.learn)}</p>`:''}${x.next?`<p><b>次に確認</b><br>${esc(x.next)}</p>`:''}</article>`).join('')}
+function markStudyDay(){let a=readStoredArray('mc_days');const d=new Date().toISOString().slice(0,10);if(!a.includes(d)){a.push(d);safeStorageSet('mc_days',JSON.stringify(a));cloudWrite('markStudyDay',{day:d})}}
+function loadLocalStats(){const days=readStoredArray('mc_days');const p=readStoredArray('mc_predictions');const t=readStoredArray('mc_terms');$('#studyDays').textContent=days.length;$('#predictionCount').textContent=p.length;$('#termProgress').textContent=t.length;const pct=Math.min(100,Math.round((t.length/terms.length)*60+Math.min(days.length,30)/30*40));$('#levelPct').textContent=pct+'%';$('#levelBar').style.width=pct+'%';$('#stageName').textContent=pct>=90?'LEVEL 2 経済連結':'LEVEL 1 基礎'}
 
 function applySetupFromUrl(){
  try{
@@ -605,18 +620,20 @@ function cloudSync(silent=false){
  if(state.syncBusy)return;state.syncBusy=true;if(!silent)setSyncStatus('busy','同期中','PC/スマホのデータを確認しています。');
  gasRequest(cloudBase('userData'),data=>{
   state.syncBusy=false;if(!data||data.ok===false)throw new Error(data?.error||'同期取得失敗');
-  const lp=JSON.parse(safeStorageGet('mc_predictions')||'[]'),lj=JSON.parse(safeStorageGet('mc_journal')||'[]'),lt=JSON.parse(safeStorageGet('mc_terms')||'[]'),ld=JSON.parse(safeStorageGet('mc_days')||'[]');
+  const lp=readStoredArray('mc_predictions'),lj=readStoredArray('mc_journal'),lt=readStoredArray('mc_terms'),ld=readStoredArray('mc_days');
   const rp=data.predictions||[],rj=data.journal||[],rt=data.terms||[],rd=data.days||[];
   const p=mergeById(lp,rp,200),j=mergeById(lj,rj,180),termsMerged=[...new Set([...lt,...rt])],daysMerged=[...new Set([...ld,...rd])].sort();
   safeStorageSet('mc_predictions',JSON.stringify(p));safeStorageSet('mc_journal',JSON.stringify(j));safeStorageSet('mc_terms',JSON.stringify(termsMerged));safeStorageSet('mc_term_count',termsMerged.length);safeStorageSet('mc_days',JSON.stringify(daysMerged));
-  // v1.4.x以前の端末内データを初回だけクラウドへ移す
-  const rpIds=new Set(rp.map(x=>String(x.id))),rjIds=new Set(rj.map(x=>String(x.id))),rtSet=new Set(rt),rdSet=new Set(rd);
-  lp.filter(x=>!rpIds.has(String(x.id))).slice(0,30).forEach(x=>cloudWrite('savePrediction',x));
-  lj.filter(x=>!rjIds.has(String(x.id))).slice(0,30).forEach(x=>cloudWrite('saveJournal',x));
-  lt.filter(x=>!rtSet.has(x)).slice(0,40).forEach(name=>cloudWrite('setTerm',{name,learned:'1'}));
-  ld.filter(x=>!rdSet.has(x)).slice(0,60).forEach(day=>cloudWrite('markStudyDay',{day}));
+  // まず接続成功を確定してUIをLIVEにする。旧端末データの移行は少量ずつ後段で行う。
   loadPredictions();loadJournal();renderTerms();loadLocalStats();renderRoadmap();state.lastSync=new Date();setSyncStatus('live','同期済み','PCとスマホで同じ学習データを使えます。');setApiStatus('live');setRefreshButton('live');if($('#connectionMessage'))$('#connectionMessage').textContent='GAS接続・同期は正常です。';if(!silent)toast('同期しました');
- },err=>{state.syncBusy=false;console.warn('cloud sync',err);setSyncStatus('error','同期できません','GAS URL・同期コード・通信状態を確認してください。');if(!silent)toast('同期できませんでした')},20000);
+  const rpIds=new Set(rp.map(x=>String(x.id))),rjIds=new Set(rj.map(x=>String(x.id))),rtSet=new Set(rt),rdSet=new Set(rd);
+  setTimeout(()=>{
+   lp.filter(x=>!rpIds.has(String(x.id))).slice(0,5).forEach(x=>cloudWrite('savePrediction',x));
+   lj.filter(x=>!rjIds.has(String(x.id))).slice(0,5).forEach(x=>cloudWrite('saveJournal',x));
+   lt.filter(x=>!rtSet.has(x)).slice(0,8).forEach(name=>cloudWrite('setTerm',{name,learned:'1'}));
+   ld.filter(x=>!rdSet.has(x)).slice(0,10).forEach(day=>cloudWrite('markStudyDay',{day}));
+  },600);
+ },err=>{state.syncBusy=false;console.warn('cloud sync',err);const msg=String(err?.message||err||'unknown');setSyncStatus('error','同期できません','診断: '+msg);if($('#connectionMessage'))$('#connectionMessage').textContent='同期エラー: '+msg;if(!silent)toast('同期できませんでした: '+msg)},20000);
 }
 function startCloudSync(){
  stopCloudSync();if(!state.backend||!state.syncToken)return;
@@ -738,3 +755,5 @@ boot();
 // v1.9.19: Firebaseログイン失敗時に実際の診断コードを画面表示し、原因を特定できるよう改善。
 // v1.9.18: Firebase Authentication本番設定を組み込み。GitHub Pagesの承認済みドメインからメール/パスワードでログイン可能。
 // v1.9.21: Firebase AuthとMARKET COMPASS端末データをIndexedDB中心へ移行。localStorage容量超過でもログイン・GAS同期を継続。
+
+// v1.9.22: 壊れた端末保存データを自動復旧。同期成功を先に確定し、外部通信キャッシュを廃止。
