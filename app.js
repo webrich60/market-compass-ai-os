@@ -1,9 +1,36 @@
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
-import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+import { initializeAuth, indexedDBLocalPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
-const state={data:null,markets:null,marketPeriod:'1m',marketSymbol:'NIKKEI',liveMarketSymbol:'NIKKEI',filter:'all',lifeFilter:'all',choices:{},backend:localStorage.getItem('mc_backend')||'',syncToken:localStorage.getItem('mc_sync_token')||'',syncTimer:null,syncBusy:false,lastSync:null,speechRun:0,speechPaused:false,speechOwner:null,sectionSpeechEl:null,audio:null,audioQueue:[],audioIndex:0,coachCancel:null,coachBusy:false};
+
+// v1.9.21: GitHub Pages の localStorage 容量超過対策。
+// MARKET COMPASS の端末保存は IndexedDB を正本にし、localStorage は書ける場合だけ互換ミラーとして使う。
+const MC_STORE_DB='market-compass-storage-v1', MC_STORE_NAME='kv';
+const storageCache=Object.create(null);let storageHydrated=false;
+function openMcStore(){return new Promise((resolve,reject)=>{try{const req=indexedDB.open(MC_STORE_DB,1);req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(MC_STORE_NAME))db.createObjectStore(MC_STORE_NAME)};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)}catch(e){reject(e)}})}
+async function hydrateStorageCache(){
+ try{
+  const db=await openMcStore();
+  await new Promise((resolve,reject)=>{const tx=db.transaction(MC_STORE_NAME,'readonly'),st=tx.objectStore(MC_STORE_NAME),req=st.getAllKeys();req.onsuccess=()=>{const keys=req.result||[];if(!keys.length){resolve();return}let left=keys.length;keys.forEach(k=>{const r=st.get(k);r.onsuccess=()=>{if(r.result!==undefined)storageCache[k]=String(r.result);if(--left===0)resolve()};r.onerror=()=>{if(--left===0)resolve()}})};req.onerror=()=>reject(req.error)});
+  db.close();
+ }catch(e){console.warn('IndexedDB hydrate failed',e)}
+ // 初回だけ既存 localStorage の小さな設定・学習データを IndexedDB へ移す。
+ const keys=['mc_backend','mc_sync_token','mc_predictions','mc_journal','mc_terms','mc_days','mc_term_count','mc_desktop_scale','mc_speech_rate','mc_speech_voice_browser'];
+ for(const k of keys){if(storageCache[k]!==undefined)continue;try{const v=localStorage.getItem(k);if(v!==null){storageCache[k]=v;idbStoreSet(k,v)}}catch(e){}}
+ storageHydrated=true;
+}
+function idbStoreSet(key,value){openMcStore().then(db=>{try{const tx=db.transaction(MC_STORE_NAME,'readwrite');tx.objectStore(MC_STORE_NAME).put(String(value),key);tx.oncomplete=()=>db.close();tx.onerror=()=>db.close()}catch(e){db.close()}}).catch(e=>console.warn('IndexedDB save failed',e))}
+function idbStoreRemove(key){openMcStore().then(db=>{try{const tx=db.transaction(MC_STORE_NAME,'readwrite');tx.objectStore(MC_STORE_NAME).delete(key);tx.oncomplete=()=>db.close();tx.onerror=()=>db.close()}catch(e){db.close()}}).catch(()=>{})}
+function safeStorageGet(key){
+ if(storageHydrated&&storageCache[key]!==undefined)return storageCache[key];
+ try{const v=localStorage.getItem(key);if(v!==null){storageCache[key]=v;return v}}catch(e){}
+ return storageCache[key]!==undefined?storageCache[key]:null;
+}
+function safeStorageSet(key,value){const v=String(value);storageCache[key]=v;idbStoreSet(key,v);try{localStorage.setItem(key,v)}catch(e){console.warn('localStorage full; using IndexedDB for',key)}}
+function safeStorageRemove(key){delete storageCache[key];idbStoreRemove(key);try{localStorage.removeItem(key)}catch(e){}}
+
+const state={data:null,markets:null,marketPeriod:'1m',marketSymbol:'NIKKEI',liveMarketSymbol:'NIKKEI',filter:'all',lifeFilter:'all',choices:{},backend:safeStorageGet('mc_backend')||'',syncToken:safeStorageGet('mc_sync_token')||'',syncTimer:null,syncBusy:false,lastSync:null,speechRun:0,speechPaused:false,speechOwner:null,sectionSpeechEl:null,audio:null,audioQueue:[],audioIndex:0,coachCancel:null,coachBusy:false};
 const DEMO={
  generatedAt:new Date().toISOString(),
  pulse:[
@@ -108,10 +135,10 @@ function bindLoginGate(){
  $('#loginResetBtn')?.addEventListener('click',resetFirebasePassword);
 }
 async function boot(){
- applySetupFromUrl();bindLoginGate();showLoginGate();
+ await hydrateStorageCache();state.backend=safeStorageGet('mc_backend')||state.backend||'';state.syncToken=safeStorageGet('mc_sync_token')||state.syncToken||'';applySetupFromUrl();bindLoginGate();showLoginGate();
  if(!firebaseConfigReady()){setLoginStatus('Firebase初期設定が未完了です。firebase-config.jsを設定してください。','error');return}
  try{
-  const fbApp=initializeApp(firebaseConfig);firebaseAuth=initializeAuth(fbApp,{persistence:[indexedDBLocalPersistence,browserLocalPersistence]});
+  const fbApp=initializeApp(firebaseConfig);firebaseAuth=initializeAuth(fbApp,{persistence:[indexedDBLocalPersistence]});
   onAuthStateChanged(firebaseAuth,async user=>{
    if(!user){appInitialized=false;showLoginGate();return}
    hideLoginGate();
@@ -131,7 +158,7 @@ function init(){
  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 function applyDesktopScale(){
- const raw=Number(localStorage.getItem('mc_desktop_scale')||'0.60');
+ const raw=Number(safeStorageGet('mc_desktop_scale')||'0.60');
  const allowed=[0.50,0.60,0.65,0.70,0.80,1];
  const scale=allowed.includes(raw)?raw:0.60;
  const inverse=(1/scale).toFixed(5);
@@ -176,14 +203,14 @@ function toggleSidebar(force){
 }
 
 function bindActions(){
- const desktopScale=$('#desktopScale');if(desktopScale){desktopScale.value=localStorage.getItem('mc_desktop_scale')||'0.60';desktopScale.onchange=e=>{localStorage.setItem('mc_desktop_scale',e.target.value);applyDesktopScale();renderMarkets();toast('PC表示を '+Math.round(Number(e.target.value)*100)+'％相当に変更しました')}}
+ const desktopScale=$('#desktopScale');if(desktopScale){desktopScale.value=safeStorageGet('mc_desktop_scale')||'0.60';desktopScale.onchange=e=>{safeStorageSet('mc_desktop_scale',e.target.value);applyDesktopScale();renderMarkets();toast('PC表示を '+Math.round(Number(e.target.value)*100)+'％相当に変更しました')}}
  $('#refreshBtn').onclick=()=>refreshAll();
  $('#speakBtn').onclick=toggleSpeech;
  $('#stopBtn').onclick=stopSpeech;
  $('#voiceTestBtn').onclick=testVoice;
  $('#copyBriefBtn').onclick=()=>navigator.clipboard?.writeText(state.data?.brief||'').then(()=>toast('原稿をコピーしました'));
  $('#radioRefreshBtn').onclick=regenerateRadioScript;
- $('#speechRate').onchange=e=>localStorage.setItem('mc_speech_rate',e.target.value);
+ $('#speechRate').onchange=e=>safeStorageSet('mc_speech_rate',e.target.value);
  $$('.choice-row button').forEach(b=>b.onclick=()=>{let row=b.parentElement;row.querySelectorAll('button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.choices[row.dataset.market]=b.dataset.choice;});
  ['USDJPY','NIKKEI'].forEach(m=>{$('#confidence'+m).oninput=e=>$('#confidence'+m+'Label').textContent=e.target.value+'/5'});
  $$('.save-prediction').forEach(b=>b.onclick=()=>savePrediction(b.dataset.market));
@@ -192,7 +219,7 @@ function bindActions(){
  $('#saveBackendBtn').onclick=()=>saveConnection();
  $('#syncNowBtn')?.addEventListener('click',()=>cloudSync(false));
  $('#phoneLinkBtn')?.addEventListener('click',buildPhoneSetupLink);
- $('#clearBackendBtn').onclick=()=>{localStorage.removeItem('mc_backend');localStorage.removeItem('mc_sync_token');state.backend='';state.syncToken='';$('#backendUrl').value='';$('#syncToken').value='';stopCloudSync();setSyncStatus('demo','未接続','クラウド同期を停止しました。');setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline');$('#connectionMessage').textContent='接続を解除しました。';renderData(DEMO);state.markets=DEMO_MARKETS;renderMarkets()};
+ $('#clearBackendBtn').onclick=()=>{safeStorageRemove('mc_backend');safeStorageRemove('mc_sync_token');state.backend='';state.syncToken='';$('#backendUrl').value='';$('#syncToken').value='';stopCloudSync();setSyncStatus('demo','未接続','クラウド同期を停止しました。');setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline');$('#connectionMessage').textContent='接続を解除しました。';renderData(DEMO);state.markets=DEMO_MARKETS;renderMarkets()};
  $('#logoutBtn')?.addEventListener('click',logoutFirebase);
  $('#backendUrl').value=state.backend;$('#syncToken').value=state.syncToken;setSyncStatus(state.backend&&state.syncToken?'busy':'demo',state.backend&&state.syncToken?'接続準備済み':'デモモード',state.backend&&state.syncToken?'同期を確認します。':'まだクラウド同期していません。');
  if(state.backend&&state.syncToken){setApiStatus('busy');setLastUpdated(null,'busy');setRefreshButton('busy')}else{setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline')}
@@ -400,17 +427,17 @@ function renderBrief(){
 }
 
 function initSpeechControls(){
- const savedRate=localStorage.getItem('mc_speech_rate');if(savedRate&&$('#speechRate'))$('#speechRate').value=savedRate;
+ const savedRate=safeStorageGet('mc_speech_rate');if(savedRate&&$('#speechRate'))$('#speechRate').value=savedRate;
  initBrowserVoices();updateVoiceHint();
 }
 function initBrowserVoices(){
  if(!('speechSynthesis' in window)){updateVoiceHint();return}
  const load=()=>{
   const select=$('#speechVoice');if(!select)return;
-  const voices=getJapaneseVoices();const saved=localStorage.getItem('mc_speech_voice_browser')||'auto';
+  const voices=getJapaneseVoices();const saved=safeStorageGet('mc_speech_voice_browser')||'auto';
   select.innerHTML='<option value="auto">おすすめを自動選択</option>'+voices.map(v=>`<option value="${esc(v.name)}">${esc(formatVoiceName(v))}</option>`).join('');
   if([...select.options].some(o=>o.value===saved))select.value=saved;
-  select.onchange=e=>{localStorage.setItem('mc_speech_voice_browser',e.target.value);updateVoiceHint()};updateVoiceHint();
+  select.onchange=e=>{safeStorageSet('mc_speech_voice_browser',e.target.value);updateVoiceHint()};updateVoiceHint();
  };
  load();speechSynthesis.onvoiceschanged=load;setTimeout(load,350);
 }
@@ -523,21 +550,21 @@ function renderCause(){const map=(state.data?.cause&&state.data.cause.length?sta
  // v1.9.11: 円安/円高材料は描画後に文章量が増えるため、ここで読み上げボタンを付け直す。
  ['#yenWeakList','#yenStrongList'].forEach(sel=>{const panel=$(sel)?.closest('.panel');if(!panel)return;panel.querySelector('.read-aloud-controls')?.remove();delete panel.dataset.readAloudReady;addReadAloudControls(panel)});
 }
-function renderRoadmap(){const done=Number(localStorage.getItem('mc_term_count')||0);const current=done>18?2:1;$('#roadmap').innerHTML=roadmap.map(r=>`<article class="road-stage ${r.n===current?'current':''}"><div class="road-num">${r.n}</div><div><h3>${esc(r.title)}</h3><div class="eyebrow">目安 ${r.period}</div><ul>${r.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><span class="badge">${r.n<current?'修了':r.n===current?'現在地':'これから'}</span></article>`).join('')}
-function renderTerms(){const learned=JSON.parse(localStorage.getItem('mc_terms')||'[]');const q=($('#termSearch')?.value||'').trim().toLowerCase();const list=terms.filter(t=>!q||t.join(' ').toLowerCase().includes(q));$('#termGrid').innerHTML=list.map(([name,desc])=>`<article class="term"><h3>${esc(name)}</h3><p>${esc(desc)}</p><button data-term="${esc(name)}" class="${learned.includes(name)?'done':''}">${learned.includes(name)?'✓ 覚えた':'覚えた'}</button></article>`).join('');$$('#termGrid button').forEach(b=>b.onclick=()=>toggleTerm(b.dataset.term));}
-function toggleTerm(name){let a=JSON.parse(localStorage.getItem('mc_terms')||'[]');const learned=!a.includes(name);a=learned?[...a,name]:a.filter(x=>x!==name);localStorage.setItem('mc_terms',JSON.stringify(a));localStorage.setItem('mc_term_count',a.length);renderTerms();loadLocalStats();renderRoadmap();cloudWrite('setTerm',{name,learned:learned?'1':'0'})}
-function savePrediction(market){const choice=state.choices[market];if(!choice)return toast('まず方向を選んでください');const reason=$('#reason'+market).value.trim().slice(0,500);if(reason.length<3)return toast('理由を一言書いてください');const rec={id:Date.now(),date:new Date().toISOString(),market,choice,reason,confidence:Number($('#confidence'+market).value)};const arr=JSON.parse(localStorage.getItem('mc_predictions')||'[]');arr.unshift(rec);localStorage.setItem('mc_predictions',JSON.stringify(arr.slice(0,200)));markStudyDay();loadPredictions();loadLocalStats();cloudWrite('savePrediction',rec);toast('予想を保存しました。PC/スマホへ同期します')}
-function loadPredictions(){const arr=JSON.parse(localStorage.getItem('mc_predictions')||'[]');$('#predictionHistory').innerHTML=arr.slice(0,8).map(x=>`<div class="history-row"><div><b>${x.market}</b> → ${esc(x.choice)} <small>自信${x.confidence}/5</small><br><small>${esc(x.reason)}</small></div><time>${fmt(x.date)}</time></div>`).join('')||'<p>まだ予想はありません。最初は当てる必要はありません。</p>'}
-function saveJournal(){const note=$('#journalNote').value.trim().slice(0,500),learn=$('#journalLearn').value.trim().slice(0,500),next=$('#journalNext').value.trim().slice(0,300);if(!note&&!learn&&!next)return toast('何か1つだけでも書いてください');const rec={id:Date.now(),date:new Date().toISOString(),note,learn,next};const arr=JSON.parse(localStorage.getItem('mc_journal')||'[]');arr.unshift(rec);localStorage.setItem('mc_journal',JSON.stringify(arr.slice(0,180)));$('#journalNote').value=$('#journalLearn').value=$('#journalNext').value='';markStudyDay();loadJournal();loadLocalStats();cloudWrite('saveJournal',rec);toast('今日の学びを保存しました。PC/スマホへ同期します')}
-function loadJournal(){const arr=JSON.parse(localStorage.getItem('mc_journal')||'[]');$('#journalHistory').innerHTML=arr.slice(0,20).map(x=>`<article class="journal-entry"><time>${fmt(x.date)}</time>${x.note?`<p><b>気になったこと</b><br>${esc(x.note)}</p>`:''}${x.learn?`<p><b>わかったこと</b><br>${esc(x.learn)}</p>`:''}${x.next?`<p><b>次に確認</b><br>${esc(x.next)}</p>`:''}</article>`).join('')}
-function markStudyDay(){let a=JSON.parse(localStorage.getItem('mc_days')||'[]');const d=new Date().toISOString().slice(0,10);if(!a.includes(d)){a.push(d);localStorage.setItem('mc_days',JSON.stringify(a));cloudWrite('markStudyDay',{day:d})}}
-function loadLocalStats(){const days=JSON.parse(localStorage.getItem('mc_days')||'[]');const p=JSON.parse(localStorage.getItem('mc_predictions')||'[]');const t=JSON.parse(localStorage.getItem('mc_terms')||'[]');$('#studyDays').textContent=days.length;$('#predictionCount').textContent=p.length;$('#termProgress').textContent=t.length;const pct=Math.min(100,Math.round((t.length/terms.length)*60+Math.min(days.length,30)/30*40));$('#levelPct').textContent=pct+'%';$('#levelBar').style.width=pct+'%';$('#stageName').textContent=pct>=90?'LEVEL 2 経済連結':'LEVEL 1 基礎'}
+function renderRoadmap(){const done=Number(safeStorageGet('mc_term_count')||0);const current=done>18?2:1;$('#roadmap').innerHTML=roadmap.map(r=>`<article class="road-stage ${r.n===current?'current':''}"><div class="road-num">${r.n}</div><div><h3>${esc(r.title)}</h3><div class="eyebrow">目安 ${r.period}</div><ul>${r.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><span class="badge">${r.n<current?'修了':r.n===current?'現在地':'これから'}</span></article>`).join('')}
+function renderTerms(){const learned=JSON.parse(safeStorageGet('mc_terms')||'[]');const q=($('#termSearch')?.value||'').trim().toLowerCase();const list=terms.filter(t=>!q||t.join(' ').toLowerCase().includes(q));$('#termGrid').innerHTML=list.map(([name,desc])=>`<article class="term"><h3>${esc(name)}</h3><p>${esc(desc)}</p><button data-term="${esc(name)}" class="${learned.includes(name)?'done':''}">${learned.includes(name)?'✓ 覚えた':'覚えた'}</button></article>`).join('');$$('#termGrid button').forEach(b=>b.onclick=()=>toggleTerm(b.dataset.term));}
+function toggleTerm(name){let a=JSON.parse(safeStorageGet('mc_terms')||'[]');const learned=!a.includes(name);a=learned?[...a,name]:a.filter(x=>x!==name);safeStorageSet('mc_terms',JSON.stringify(a));safeStorageSet('mc_term_count',a.length);renderTerms();loadLocalStats();renderRoadmap();cloudWrite('setTerm',{name,learned:learned?'1':'0'})}
+function savePrediction(market){const choice=state.choices[market];if(!choice)return toast('まず方向を選んでください');const reason=$('#reason'+market).value.trim().slice(0,500);if(reason.length<3)return toast('理由を一言書いてください');const rec={id:Date.now(),date:new Date().toISOString(),market,choice,reason,confidence:Number($('#confidence'+market).value)};const arr=JSON.parse(safeStorageGet('mc_predictions')||'[]');arr.unshift(rec);safeStorageSet('mc_predictions',JSON.stringify(arr.slice(0,200)));markStudyDay();loadPredictions();loadLocalStats();cloudWrite('savePrediction',rec);toast('予想を保存しました。PC/スマホへ同期します')}
+function loadPredictions(){const arr=JSON.parse(safeStorageGet('mc_predictions')||'[]');$('#predictionHistory').innerHTML=arr.slice(0,8).map(x=>`<div class="history-row"><div><b>${x.market}</b> → ${esc(x.choice)} <small>自信${x.confidence}/5</small><br><small>${esc(x.reason)}</small></div><time>${fmt(x.date)}</time></div>`).join('')||'<p>まだ予想はありません。最初は当てる必要はありません。</p>'}
+function saveJournal(){const note=$('#journalNote').value.trim().slice(0,500),learn=$('#journalLearn').value.trim().slice(0,500),next=$('#journalNext').value.trim().slice(0,300);if(!note&&!learn&&!next)return toast('何か1つだけでも書いてください');const rec={id:Date.now(),date:new Date().toISOString(),note,learn,next};const arr=JSON.parse(safeStorageGet('mc_journal')||'[]');arr.unshift(rec);safeStorageSet('mc_journal',JSON.stringify(arr.slice(0,180)));$('#journalNote').value=$('#journalLearn').value=$('#journalNext').value='';markStudyDay();loadJournal();loadLocalStats();cloudWrite('saveJournal',rec);toast('今日の学びを保存しました。PC/スマホへ同期します')}
+function loadJournal(){const arr=JSON.parse(safeStorageGet('mc_journal')||'[]');$('#journalHistory').innerHTML=arr.slice(0,20).map(x=>`<article class="journal-entry"><time>${fmt(x.date)}</time>${x.note?`<p><b>気になったこと</b><br>${esc(x.note)}</p>`:''}${x.learn?`<p><b>わかったこと</b><br>${esc(x.learn)}</p>`:''}${x.next?`<p><b>次に確認</b><br>${esc(x.next)}</p>`:''}</article>`).join('')}
+function markStudyDay(){let a=JSON.parse(safeStorageGet('mc_days')||'[]');const d=new Date().toISOString().slice(0,10);if(!a.includes(d)){a.push(d);safeStorageSet('mc_days',JSON.stringify(a));cloudWrite('markStudyDay',{day:d})}}
+function loadLocalStats(){const days=JSON.parse(safeStorageGet('mc_days')||'[]');const p=JSON.parse(safeStorageGet('mc_predictions')||'[]');const t=JSON.parse(safeStorageGet('mc_terms')||'[]');$('#studyDays').textContent=days.length;$('#predictionCount').textContent=p.length;$('#termProgress').textContent=t.length;const pct=Math.min(100,Math.round((t.length/terms.length)*60+Math.min(days.length,30)/30*40));$('#levelPct').textContent=pct+'%';$('#levelBar').style.width=pct+'%';$('#stageName').textContent=pct>=90?'LEVEL 2 経済連結':'LEVEL 1 基礎'}
 
 function applySetupFromUrl(){
  try{
   const u=new URL(location.href),b=u.searchParams.get('backend'),t=u.searchParams.get('token');
-  if(b&&/^https:\/\/script\.google\.com\//.test(b)){localStorage.setItem('mc_backend',b);state.backend=b}
-  if(t&&t.length>=6){localStorage.setItem('mc_sync_token',t);state.syncToken=t}
+  if(b&&/^https:\/\/script\.google\.com\//.test(b)){safeStorageSet('mc_backend',b);state.backend=b}
+  if(t&&t.length>=6){safeStorageSet('mc_sync_token',t);state.syncToken=t}
   if((b||t)&&location.protocol!=='file:'){u.searchParams.delete('backend');u.searchParams.delete('token');history.replaceState({},'',u.pathname+u.search+u.hash)}
  }catch(e){}
 }
@@ -551,7 +578,7 @@ function saveConnection(){
  if(!u)return toast('GAS URLを入力してください');
  if(!/^https:\/\/script\.google\.com\//.test(u))return toast('GAS WebアプリURLを確認してください');
  if(token.length<6)return toast('同期コードを入力してください');
- localStorage.setItem('mc_backend',u);localStorage.setItem('mc_sync_token',token);state.backend=u;state.syncToken=token;
+ safeStorageSet('mc_backend',u);safeStorageSet('mc_sync_token',token);state.backend=u;state.syncToken=token;
  setSyncStatus('busy','接続確認中','ニュースと学習データを確認しています。');fetchBackend(true);cloudSync(false);startCloudSync();
 }
 function buildPhoneSetupLink(){
@@ -578,10 +605,10 @@ function cloudSync(silent=false){
  if(state.syncBusy)return;state.syncBusy=true;if(!silent)setSyncStatus('busy','同期中','PC/スマホのデータを確認しています。');
  gasRequest(cloudBase('userData'),data=>{
   state.syncBusy=false;if(!data||data.ok===false)throw new Error(data?.error||'同期取得失敗');
-  const lp=JSON.parse(localStorage.getItem('mc_predictions')||'[]'),lj=JSON.parse(localStorage.getItem('mc_journal')||'[]'),lt=JSON.parse(localStorage.getItem('mc_terms')||'[]'),ld=JSON.parse(localStorage.getItem('mc_days')||'[]');
+  const lp=JSON.parse(safeStorageGet('mc_predictions')||'[]'),lj=JSON.parse(safeStorageGet('mc_journal')||'[]'),lt=JSON.parse(safeStorageGet('mc_terms')||'[]'),ld=JSON.parse(safeStorageGet('mc_days')||'[]');
   const rp=data.predictions||[],rj=data.journal||[],rt=data.terms||[],rd=data.days||[];
   const p=mergeById(lp,rp,200),j=mergeById(lj,rj,180),termsMerged=[...new Set([...lt,...rt])],daysMerged=[...new Set([...ld,...rd])].sort();
-  localStorage.setItem('mc_predictions',JSON.stringify(p));localStorage.setItem('mc_journal',JSON.stringify(j));localStorage.setItem('mc_terms',JSON.stringify(termsMerged));localStorage.setItem('mc_term_count',termsMerged.length);localStorage.setItem('mc_days',JSON.stringify(daysMerged));
+  safeStorageSet('mc_predictions',JSON.stringify(p));safeStorageSet('mc_journal',JSON.stringify(j));safeStorageSet('mc_terms',JSON.stringify(termsMerged));safeStorageSet('mc_term_count',termsMerged.length);safeStorageSet('mc_days',JSON.stringify(daysMerged));
   // v1.4.x以前の端末内データを初回だけクラウドへ移す
   const rpIds=new Set(rp.map(x=>String(x.id))),rjIds=new Set(rj.map(x=>String(x.id))),rtSet=new Set(rt),rdSet=new Set(rd);
   lp.filter(x=>!rpIds.has(String(x.id))).slice(0,30).forEach(x=>cloudWrite('savePrediction',x));
@@ -710,4 +737,4 @@ boot();
 // v1.9.11: 円安・円高の材料カードも描画完了後に無料読み上げへ対応。
 // v1.9.19: Firebaseログイン失敗時に実際の診断コードを画面表示し、原因を特定できるよう改善。
 // v1.9.18: Firebase Authentication本番設定を組み込み。GitHub Pagesの承認済みドメインからメール/パスワードでログイン可能。
-// v1.9.20: GitHub PagesでlocalStorage容量超過が起きるため、Firebase AuthはIndexedDB優先のLOCAL永続化へ変更。通常は明示的なログアウトまで認証状態を保持。
+// v1.9.21: Firebase AuthとMARKET COMPASS端末データをIndexedDB中心へ移行。localStorage容量超過でもログイン・GAS同期を継続。
