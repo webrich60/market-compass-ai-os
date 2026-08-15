@@ -21,13 +21,13 @@
     <p>この端末ではログイン後60日間保持します。PINはGitHubには保存されず、GAS側で確認します。</p>
     <label>ログインPIN<input id="loginPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" placeholder="PIN"></label>
     <button class="primary login-submit" id="loginSubmitBtn">ログイン</button>
-    <div class="login-status" id="loginStatus">PINを入力してログインしてください。</div>
+    <div class="login-status" id="loginStatus">初回は下のGAS URL・同期コードを入力し、そのまま「ログイン」を押してください。</div>
     <details class="login-setup" id="loginSetup">
       <summary>初回だけ：接続情報を設定</summary>
       <label>GAS WebアプリURL<input id="loginBackendUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
       <label>同期コード<input id="loginSyncToken" type="password" autocomplete="off" placeholder="同期コード"></label>
       <button class="ghost" id="loginSaveConnectionBtn" type="button">接続情報を保存</button>
-      <small>GitHub Pagesを初めて開くPCではここを1回だけ設定します。スマホ初回接続リンクから開いた場合は自動設定されます。</small>
+      <small>GitHub Pagesを初めて開く端末では1回だけ入力します。入力後は「接続情報を保存」を押さなくても、ログイン時に自動保存されます。スマホ初回接続リンクから開いた場合は自動設定されます。</small>
     </details>
     <small class="login-note">※ 簡易PINロックです。GitHub Pages自体を非公開にする機能ではありません。検索エンジンのnoindex設定も併用しています。</small>
   </div>

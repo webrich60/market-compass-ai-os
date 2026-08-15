@@ -50,15 +50,18 @@ function showLoginGate(){
  setTimeout(()=>$('#loginPin')?.focus(),80);
 }
 function hideLoginGate(){const gate=$('#loginGate');if(gate)gate.hidden=true;document.body.classList.remove('login-locked')}
-function saveLoginConnection(){
- const u=$('#loginBackendUrl')?.value.trim()||'',token=$('#loginSyncToken')?.value.trim()||'';
- if(!u||!/^https:\/\/script\.google\.com\//.test(u))return setLoginStatus('GAS WebアプリURLを確認してください。','error');
- if(token.length<6)return setLoginStatus('同期コードを入力してください。','error');
- localStorage.setItem('mc_backend',u);localStorage.setItem('mc_sync_token',token);state.backend=u;state.syncToken=token;setLoginStatus('接続情報を保存しました。PINを入力してください。','ok');
+function saveLoginConnection(silent=false){
+ const u=$('#loginBackendUrl')?.value.trim()||state.backend||'',token=$('#loginSyncToken')?.value.trim()||state.syncToken||'';
+ if(!u||!/^https:\/\/script\.google\.com\//.test(u)){setLoginStatus('GAS WebアプリURLを確認してください。','error');return false}
+ if(token.length<6){setLoginStatus('同期コードを入力してください。','error');return false}
+ localStorage.setItem('mc_backend',u);localStorage.setItem('mc_sync_token',token);state.backend=u;state.syncToken=token;
+ if(!silent)setLoginStatus('接続情報を保存しました。そのままログインできます。','ok');
+ return true;
 }
 function loginWithPin(){
  const pin=$('#loginPin')?.value.trim()||'';if(!pin)return setLoginStatus('PINを入力してください。','error');
- if(!state.backend)return setLoginStatus('初回接続設定でGAS WebアプリURLを保存してください。','error');
+ // 初回は「接続情報を保存」を別に押さなくても、ログイン時に自動保存します。
+ if(!saveLoginConnection(true))return;
  const btn=$('#loginSubmitBtn');if(btn){btn.disabled=true;btn.textContent='確認中…'};setLoginStatus('PINを確認しています…');
  const sep=state.backend.includes('?')?'&':'?';const url=state.backend+sep+'action=login&pin='+encodeURIComponent(pin);
  gasRequest(url,d=>{
@@ -666,3 +669,4 @@ boot();
 // v1.9.9: AI先生・重要ニュース・因果関係・学習カードなど文章カードへ無料読み上げを拡張。
 
 // v1.9.11: 円安・円高の材料カードも描画完了後に無料読み上げへ対応。
+// v1.9.15: PIN画面を縦スクロール対応。初回はGAS URL・同期コードを入力してログインを押すだけで自動保存。
