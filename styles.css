@@ -251,3 +251,9 @@ nav button:hover{transform:translateX(2px)}
 @media(min-height:900px){.login-gate{place-items:center}.login-card{margin:0}}
 
 @media(min-width:1051px){body.login-locked{zoom:1!important}}
+
+/* v1.9.16 Firebase email/password login */
+.login-password-label{margin-top:12px}
+.login-reset-link{display:block;margin:12px auto 0;border:0;background:transparent;color:#9fc7ef;font-weight:800;font-size:.75rem;text-decoration:underline;cursor:pointer;padding:6px 8px}
+.login-reset-link:hover{color:#d8ebff}
+.account-card .ghost{margin-top:6px}

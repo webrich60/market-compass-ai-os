@@ -1,3 +1,7 @@
+import { firebaseConfig } from './firebase-config.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
+import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const state={data:null,markets:null,marketPeriod:'1m',marketSymbol:'NIKKEI',liveMarketSymbol:'NIKKEI',filter:'all',lifeFilter:'all',choices:{},backend:localStorage.getItem('mc_backend')||'',syncToken:localStorage.getItem('mc_sync_token')||'',syncTimer:null,syncBusy:false,lastSync:null,speechRun:0,speechPaused:false,speechOwner:null,sectionSpeechEl:null,audio:null,audioQueue:[],audioIndex:0,coachCancel:null,coachBusy:false};
 const DEMO={
@@ -40,46 +44,66 @@ const roadmap=[
  {n:5,title:'自分の型を持つ',period:'30か月〜',items:['得意市場と時間軸を限定','売買しない判断もルール化','四半期ごとに戦略を再検証','感情ではなく再現性を優先']}
 ];
 const cause=['インフレ上振れ','利下げ期待が後退','金利上昇圧力','ドル買い要因','ドル円の円安要因'];
-const AUTH_UNTIL_KEY='mc_auth_until';
-function authIsValid(){return Number(localStorage.getItem(AUTH_UNTIL_KEY)||0)>Date.now()}
+let firebaseAuth=null;
+let appInitialized=false;
+function firebaseConfigReady(){
+ return firebaseConfig&&firebaseConfig.apiKey&&!String(firebaseConfig.apiKey).includes('YOUR_')&&firebaseConfig.authDomain&&!String(firebaseConfig.authDomain).includes('YOUR_')&&firebaseConfig.projectId&&!String(firebaseConfig.projectId).includes('YOUR_');
+}
 function setLoginStatus(text,mode=''){const el=$('#loginStatus');if(!el)return;el.textContent=text;el.className='login-status'+(mode?' '+mode:'')}
 function showLoginGate(){
  const gate=$('#loginGate');if(!gate)return;
  document.body.classList.add('login-locked');gate.hidden=false;
- const b=$('#loginBackendUrl'),t=$('#loginSyncToken');if(b)b.value=state.backend||'';if(t)t.value=state.syncToken||'';
- setTimeout(()=>$('#loginPin')?.focus(),80);
+ setTimeout(()=>$('#loginEmail')?.focus(),80);
 }
 function hideLoginGate(){const gate=$('#loginGate');if(gate)gate.hidden=true;document.body.classList.remove('login-locked')}
-function saveLoginConnection(silent=false){
- const u=$('#loginBackendUrl')?.value.trim()||state.backend||'',token=$('#loginSyncToken')?.value.trim()||state.syncToken||'';
- if(!u||!/^https:\/\/script\.google\.com\//.test(u)){setLoginStatus('GAS WebアプリURLを確認してください。','error');return false}
- if(token.length<6){setLoginStatus('同期コードを入力してください。','error');return false}
- localStorage.setItem('mc_backend',u);localStorage.setItem('mc_sync_token',token);state.backend=u;state.syncToken=token;
- if(!silent)setLoginStatus('接続情報を保存しました。そのままログインできます。','ok');
- return true;
+function friendlyFirebaseError(err){
+ const code=String(err?.code||'');
+ if(code.includes('invalid-credential')||code.includes('wrong-password')||code.includes('user-not-found'))return 'メールアドレスまたはパスワードが違います。';
+ if(code.includes('invalid-email'))return 'メールアドレスの形式を確認してください。';
+ if(code.includes('too-many-requests'))return 'ログイン試行が多すぎます。少し時間をおいてから再度お試しください。';
+ if(code.includes('network-request-failed'))return '通信できませんでした。インターネット接続を確認してください。';
+ return 'ログインできませんでした。Firebase設定と登録アカウントを確認してください。';
 }
-function loginWithPin(){
- const pin=$('#loginPin')?.value.trim()||'';if(!pin)return setLoginStatus('PINを入力してください。','error');
- // 初回は「接続情報を保存」を別に押さなくても、ログイン時に自動保存します。
- if(!saveLoginConnection(true))return;
- const btn=$('#loginSubmitBtn');if(btn){btn.disabled=true;btn.textContent='確認中…'};setLoginStatus('PINを確認しています…');
- const sep=state.backend.includes('?')?'&':'?';const url=state.backend+sep+'action=login&pin='+encodeURIComponent(pin);
- gasRequest(url,d=>{
-  if(btn){btn.disabled=false;btn.textContent='ログイン'}
-  if(!d||d.ok!==true)return setLoginStatus(d?.error||'PINが一致しません。','error');
-  localStorage.setItem(AUTH_UNTIL_KEY,String(Date.now()+60*24*60*60*1000));
-  setLoginStatus('ログインしました。','ok');hideLoginGate();init();
- },err=>{if(btn){btn.disabled=false;btn.textContent='ログイン'};console.warn('login',err);setLoginStatus('GASへ接続できませんでした。接続情報を確認してください。','error')},12000);
+async function loginWithFirebase(){
+ const email=$('#loginEmail')?.value.trim()||'',password=$('#loginPassword')?.value||'';
+ if(!email)return setLoginStatus('メールアドレスを入力してください。','error');
+ if(!password)return setLoginStatus('パスワードを入力してください。','error');
+ if(!firebaseAuth)return setLoginStatus('Firebase Authenticationの初期設定が完了していません。','error');
+ const btn=$('#loginSubmitBtn');if(btn){btn.disabled=true;btn.textContent='ログイン中…'};setLoginStatus('本人確認をしています…');
+ try{
+  await signInWithEmailAndPassword(firebaseAuth,email,password);
+  setLoginStatus('ログインしました。','ok');
+ }catch(err){console.warn('firebase login',err);setLoginStatus(friendlyFirebaseError(err),'error')}
+ finally{if(btn){btn.disabled=false;btn.textContent='ログイン'}}
 }
-function logoutSimple(){localStorage.removeItem(AUTH_UNTIL_KEY);stopSpeech?.();location.reload()}
+async function resetFirebasePassword(){
+ const email=$('#loginEmail')?.value.trim()||'';
+ if(!email)return setLoginStatus('先にメールアドレスを入力してください。','error');
+ if(!firebaseAuth)return setLoginStatus('Firebase Authenticationの初期設定が完了していません。','error');
+ try{await sendPasswordResetEmail(firebaseAuth,email);setLoginStatus('パスワード再設定メールを送信しました。','ok')}catch(err){console.warn('firebase reset',err);setLoginStatus(friendlyFirebaseError(err),'error')}
+}
+async function logoutFirebase(){
+ try{stopSpeech?.();if(firebaseAuth)await signOut(firebaseAuth)}catch(e){console.warn('logout',e)}
+ appInitialized=false;showLoginGate();setLoginStatus('ログアウトしました。');
+}
 function bindLoginGate(){
- $('#loginSubmitBtn')?.addEventListener('click',loginWithPin);
- $('#loginPin')?.addEventListener('keydown',e=>{if(e.key==='Enter')loginWithPin()});
- $('#loginSaveConnectionBtn')?.addEventListener('click',saveLoginConnection);
+ $('#loginSubmitBtn')?.addEventListener('click',loginWithFirebase);
+ $('#loginPassword')?.addEventListener('keydown',e=>{if(e.key==='Enter')loginWithFirebase()});
+ $('#loginEmail')?.addEventListener('keydown',e=>{if(e.key==='Enter')$('#loginPassword')?.focus()});
+ $('#loginResetBtn')?.addEventListener('click',resetFirebasePassword);
 }
-function boot(){
- applySetupFromUrl();bindLoginGate();
- if(authIsValid()){hideLoginGate();init()}else showLoginGate();
+async function boot(){
+ applySetupFromUrl();bindLoginGate();showLoginGate();
+ if(!firebaseConfigReady()){setLoginStatus('Firebase初期設定が未完了です。firebase-config.jsを設定してください。','error');return}
+ try{
+  const fbApp=initializeApp(firebaseConfig);firebaseAuth=getAuth(fbApp);await setPersistence(firebaseAuth,browserLocalPersistence);
+  onAuthStateChanged(firebaseAuth,async user=>{
+   if(!user){appInitialized=false;showLoginGate();return}
+   hideLoginGate();
+   if(!appInitialized){appInitialized=true;init()}
+   const mail=$('#firebaseUserEmail');if(mail)mail.textContent='ログイン中：'+(user.email||'Firebaseユーザー');
+  });
+ }catch(err){console.warn('firebase init',err);setLoginStatus('Firebaseを初期化できませんでした。firebase-config.jsを確認してください。','error')}
 }
 function init(){
  applyDesktopScale();
@@ -154,7 +178,7 @@ function bindActions(){
  $('#syncNowBtn')?.addEventListener('click',()=>cloudSync(false));
  $('#phoneLinkBtn')?.addEventListener('click',buildPhoneSetupLink);
  $('#clearBackendBtn').onclick=()=>{localStorage.removeItem('mc_backend');localStorage.removeItem('mc_sync_token');state.backend='';state.syncToken='';$('#backendUrl').value='';$('#syncToken').value='';stopCloudSync();setSyncStatus('demo','未接続','クラウド同期を停止しました。');setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline');$('#connectionMessage').textContent='接続を解除しました。';renderData(DEMO);state.markets=DEMO_MARKETS;renderMarkets()};
- $('#logoutBtn')?.addEventListener('click',logoutSimple);
+ $('#logoutBtn')?.addEventListener('click',logoutFirebase);
  $('#backendUrl').value=state.backend;$('#syncToken').value=state.syncToken;setSyncStatus(state.backend&&state.syncToken?'busy':'demo',state.backend&&state.syncToken?'接続準備済み':'デモモード',state.backend&&state.syncToken?'同期を確認します。':'まだクラウド同期していません。');
  if(state.backend&&state.syncToken){setApiStatus('busy');setLastUpdated(null,'busy');setRefreshButton('busy')}else{setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline')}
  $$('#newsFilters button').forEach(b=>b.onclick=()=>{$$('#newsFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.filter=b.dataset.filter;renderNews()});
@@ -669,4 +693,5 @@ boot();
 // v1.9.9: AI先生・重要ニュース・因果関係・学習カードなど文章カードへ無料読み上げを拡張。
 
 // v1.9.11: 円安・円高の材料カードも描画完了後に無料読み上げへ対応。
-// v1.9.15: PIN画面を縦スクロール対応。初回はGAS URL・同期コードを入力してログインを押すだけで自動保存。
+// v1.9.18: Firebase Authentication本番設定を組み込み。GitHub Pagesの承認済みドメインからメール/パスワードでログイン可能。
+// v1.9.17: Firebaseの独自60日再ログイン制限を廃止。browserLocalPersistenceにより通常は明示的なログアウトまで認証状態を保持。

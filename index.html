@@ -16,20 +16,15 @@
 <div class="login-gate" id="loginGate" hidden>
   <div class="login-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
     <div class="login-brand"><div class="brand-mark">MC</div><div><strong>MARKET COMPASS</strong><span>PRIVATE ACCESS</span></div></div>
-    <div class="eyebrow">簡易ログイン</div>
-    <h1 id="loginTitle">PINを入力してください</h1>
-    <p>この端末ではログイン後60日間保持します。PINはGitHubには保存されず、GAS側で確認します。</p>
-    <label>ログインPIN<input id="loginPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" placeholder="PIN"></label>
-    <button class="primary login-submit" id="loginSubmitBtn">ログイン</button>
-    <div class="login-status" id="loginStatus">初回は下のGAS URL・同期コードを入力し、そのまま「ログイン」を押してください。</div>
-    <details class="login-setup" id="loginSetup">
-      <summary>初回だけ：接続情報を設定</summary>
-      <label>GAS WebアプリURL<input id="loginBackendUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
-      <label>同期コード<input id="loginSyncToken" type="password" autocomplete="off" placeholder="同期コード"></label>
-      <button class="ghost" id="loginSaveConnectionBtn" type="button">接続情報を保存</button>
-      <small>GitHub Pagesを初めて開く端末では1回だけ入力します。入力後は「接続情報を保存」を押さなくても、ログイン時に自動保存されます。スマホ初回接続リンクから開いた場合は自動設定されます。</small>
-    </details>
-    <small class="login-note">※ 簡易PINロックです。GitHub Pages自体を非公開にする機能ではありません。検索エンジンのnoindex設定も併用しています。</small>
+    <div class="eyebrow">PRIVATE LOGIN</div>
+    <h1 id="loginTitle">ログインしてください</h1>
+    <p>Firebase Authenticationで本人確認します。通常は、このブラウザでログアウトするまでログイン状態を保持します。</p>
+    <label>メールアドレス<input id="loginEmail" type="email" autocomplete="username" inputmode="email" placeholder="example@gmail.com"></label>
+    <label class="login-password-label">パスワード<input id="loginPassword" type="password" autocomplete="current-password" placeholder="パスワード"></label>
+    <button class="primary login-submit" id="loginSubmitBtn" type="button">ログイン</button>
+    <button class="login-reset-link" id="loginResetBtn" type="button">パスワードを忘れた場合</button>
+    <div class="login-status" id="loginStatus">Firebaseに登録したメールアドレスとパスワードを入力してください。</div>
+    <small class="login-note">※ Google・Bing等には noindex を指定しています。GitHub PagesのURL自体は公開URLです。</small>
   </div>
 </div>
 
@@ -308,6 +303,12 @@
         <div class="hero-actions"><button class="primary" id="saveBackendBtn">保存して接続・同期</button><button class="ghost" id="syncNowBtn">今すぐ同期</button><button class="ghost" id="clearBackendBtn">デモに戻す</button></div>
         <div id="connectionMessage" class="connection-message"></div>
       </article>
+      <article class="panel auth-account-card">
+        <div class="eyebrow">LOGIN ACCOUNT</div>
+        <h3>ログイン中のアカウント</h3>
+        <p id="firebaseUserEmail">Firebaseログインを確認中です。</p>
+        <button class="ghost" id="logoutBtn" type="button">ログアウト</button>
+      </article>
       <article class="panel desktop-view-card">
         <div class="desktop-view-row">
           <div class="desktop-view-copy">
@@ -356,6 +357,6 @@
   <button id="mobileMoreBtn"><span class="dock-icon">☰</span><b>その他</b><i class="nav-dot"></i></button>
 </nav>
 <div class="toast" id="toast"></div>
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
