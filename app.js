@@ -57,12 +57,27 @@ function showLoginGate(){
 }
 function hideLoginGate(){const gate=$('#loginGate');if(gate)gate.hidden=true;document.body.classList.remove('login-locked')}
 function friendlyFirebaseError(err){
- const code=String(err?.code||'');
- if(code.includes('invalid-credential')||code.includes('wrong-password')||code.includes('user-not-found'))return 'メールアドレスまたはパスワードが違います。';
- if(code.includes('invalid-email'))return 'メールアドレスの形式を確認してください。';
- if(code.includes('too-many-requests'))return 'ログイン試行が多すぎます。少し時間をおいてから再度お試しください。';
- if(code.includes('network-request-failed'))return '通信できませんでした。インターネット接続を確認してください。';
- return 'ログインできませんでした。Firebase設定と登録アカウントを確認してください。';
+ const code=String(err?.code||'unknown');
+ if(code.includes('invalid-credential')||code.includes('wrong-password')||code.includes('user-not-found'))return `メールアドレスまたはパスワードが違います。
+診断コード: ${code}`;
+ if(code.includes('invalid-email'))return `メールアドレスの形式を確認してください。
+診断コード: ${code}`;
+ if(code.includes('too-many-requests'))return `ログイン試行が多すぎます。少し時間をおいてから再度お試しください。
+診断コード: ${code}`;
+ if(code.includes('network-request-failed'))return `通信できませんでした。インターネット接続を確認してください。
+診断コード: ${code}`;
+ if(code.includes('operation-not-allowed'))return `Firebaseのメール/パスワード認証が有効になっていません。
+診断コード: ${code}`;
+ if(code.includes('unauthorized-domain')||code.includes('app-not-authorized'))return `GitHub PagesのドメインがFirebase側で許可されていません。
+診断コード: ${code}`;
+ if(code.includes('invalid-api-key')||code.includes('api-key-not-valid'))return `Firebase Web APIキーを確認してください。
+診断コード: ${code}`;
+ if(code.includes('configuration-not-found'))return `Firebase Authenticationの構成を確認してください。
+診断コード: ${code}`;
+ const msg=String(err?.message||'').replace(/^Firebase:\s*/,'').slice(0,180);
+ return `ログインできませんでした。パスワード以外のFirebase設定エラーの可能性があります。
+診断コード: ${code}${msg?`
+詳細: ${msg}`:''}`;
 }
 async function loginWithFirebase(){
  const email=$('#loginEmail')?.value.trim()||'',password=$('#loginPassword')?.value||'';
@@ -693,5 +708,6 @@ boot();
 // v1.9.9: AI先生・重要ニュース・因果関係・学習カードなど文章カードへ無料読み上げを拡張。
 
 // v1.9.11: 円安・円高の材料カードも描画完了後に無料読み上げへ対応。
+// v1.9.19: Firebaseログイン失敗時に実際の診断コードを画面表示し、原因を特定できるよう改善。
 // v1.9.18: Firebase Authentication本番設定を組み込み。GitHub Pagesの承認済みドメインからメール/パスワードでログイン可能。
 // v1.9.17: Firebaseの独自60日再ログイン制限を廃止。browserLocalPersistenceにより通常は明示的なログアウトまで認証状態を保持。
