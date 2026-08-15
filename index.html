@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b5bd3">
+  <title>MARKET COMPASS AI OS</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">MC</div>
+      <div><strong>MARKET COMPASS</strong><span>AI LEARNING OS</span></div>
+    </div>
+    <div class="level-card">
+      <div class="eyebrow">現在のステージ</div>
+      <div class="level-row"><b id="stageName">LEVEL 1 基礎</b><span id="levelPct">0%</span></div>
+      <div class="progress"><i id="levelBar"></i></div>
+      <small>毎日15〜30分でOK。焦らず積み上げます。</small>
+    </div>
+    <nav id="nav">
+      <button data-page="home" class="active">🏠 今日のホーム</button>
+      <button data-page="brief">🎧 朝の経済ラジオ</button>
+      <button data-page="news">📰 重要ニュース</button>
+      <button data-page="lifestyle">☕ 今日の寄り道</button>
+      <button data-page="market">📈 市場チャート</button>
+      <button data-page="drivers">🧭 相場の因果関係</button>
+      <button data-page="learn">🎓 学習ロードマップ</button>
+      <button data-page="practice">🧪 模擬判断トレーニング</button>
+      <button data-page="journal">📒 投資・FX判断ノート</button>
+      <button data-page="terms">📚 経済用語辞典</button>
+      <button data-page="settings">⚙️ 初期設定・同期</button>
+    </nav>
+    <div class="side-note">実売買の自動発注は行いません。まず「判断→検証→改善」を鍛える設計です。</div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="メニュー">☰</button>
+      <div>
+        <div class="eyebrow" id="todayLabel"></div>
+        <h1 id="pageTitle">今日のホーム</h1>
+      </div>
+      <div class="status-group">
+        <span class="status-dot offline" id="apiStatus">● 未接続</span>
+        <div class="refresh-control"><span id="lastUpdatedLabel" class="last-updated">最終更新 --:--</span><button class="primary small" id="refreshBtn">↻ 更新</button></div>
+      </div>
+    </header>
+
+    <section class="page active" id="page-home">
+      <div class="hero-grid">
+        <article class="hero-card">
+          <div class="eyebrow">今日やること</div>
+          <h2>ニュースを読む前に「相場の理由」を考える</h2>
+          <p>①5分ラジオ → ②重要ニュース3本 → ③自分の予想 → ④夜に答え合わせ。これを繰り返します。</p>
+          <div class="hero-actions"><button class="primary" data-goto="brief">▶ 5分ラジオを聞く</button><button class="ghost" data-goto="practice">今日の予想を残す</button></div>
+        </article>
+        <article class="score-card">
+          <div class="eyebrow">学習スコア</div>
+          <div class="big-score"><span id="studyDays">0</span><small>日</small></div>
+          <p>継続日数</p>
+          <div class="mini-stats"><span>予想 <b id="predictionCount">0</b>件</span><span>用語 <b id="termProgress">0</b>個</span></div>
+        </article>
+      </div>
+
+      <div class="section-head"><div><span class="eyebrow">MARKET PULSE</span><h2>今日の市場ドライバー</h2></div><button class="text-btn" data-goto="drivers">詳しく見る →</button></div>
+      <div class="pulse-grid" id="pulseGrid"></div>
+
+
+      <div class="section-head market-head"><div><span class="eyebrow">MARKET CHARTS</span><h2>日経平均・ドル円の動き</h2></div><button class="text-btn" data-goto="market">詳しく見る →</button></div>
+      <div class="market-periods compact" id="homeMarketPeriods" aria-label="表示期間">
+        <button data-market-period="1w">1週間</button><button data-market-period="1m" class="active">1か月</button><button data-market-period="3m">3か月</button><button data-market-period="1y">1年</button>
+      </div>
+      <div class="market-summary-grid">
+        <article class="market-card">
+          <div class="market-card-head"><div><span>日経平均</span><strong id="homeNikkeiValue">--</strong><small id="homeNikkeiChange">--</small></div><span class="data-badge" id="homeNikkeiBadge">デモ</span></div>
+          <div class="mini-market-chart" id="homeNikkeiChart" aria-label="日経平均の折れ線グラフ"></div>
+        </article>
+        <article class="market-card">
+          <div class="market-card-head"><div><span>ドル円</span><strong id="homeUsdJpyValue">--</strong><small id="homeUsdJpyChange">--</small></div><span class="data-badge" id="homeUsdJpyBadge">デモ</span></div>
+          <div class="mini-market-chart" id="homeUsdJpyChart" aria-label="ドル円の折れ線グラフ"></div>
+        </article>
+      </div>
+      <p class="market-caption" id="homeMarketCaption">デモではサンプル値を表示します。FRED接続後は日次データへ切り替わります。</p>
+
+      <div class="section-head"><div><span class="eyebrow">TOP STORIES</span><h2>まず読む3本</h2></div><button class="text-btn" data-goto="news">すべて見る →</button></div>
+      <div class="news-grid" id="topNews"></div>
+
+      <div class="section-head lifestyle-head"><div><span class="eyebrow">MORNING DETOUR</span><h2>☕ 今日の寄り道</h2><p>経済から少し離れて、旅・温泉・地域・暮らしの面白い記事を少しだけ。</p></div><button class="text-btn" data-goto="lifestyle">もっと見る →</button></div>
+      <div class="lifestyle-grid" id="homeLifestyle"></div>
+
+      <div class="two-col">
+        <article class="panel">
+          <div class="eyebrow">TODAY'S LESSON</div>
+          <h3 id="dailyLessonTitle">金利と為替</h3>
+          <p id="dailyLessonText">金利が変わると、お金がどの国へ動きやすくなるのかを理解します。</p>
+          <button class="ghost" data-goto="learn">今日の学習へ</button>
+        </article>
+        <article class="panel">
+          <div class="eyebrow">QUESTION OF THE DAY</div>
+          <h3>「このニュースなら円高？円安？」</h3>
+          <p>正解を当てるより、理由を言葉にすることが目的です。</p>
+          <button class="primary" data-goto="practice">考えてみる</button>
+        </article>
+      </div>
+    </section>
+
+    <section class="page" id="page-brief">
+      <article class="radio-card">
+        <div>
+          <div class="eyebrow">MORNING MARKET RADIO</div>
+          <h2>今日の世界・日本経済 5分ダイジェスト</h2>
+          <p id="briefIntro">Geminiが世界と日本の重要ニュースを選び、意味と市場へのつながりまで約5分でまとめます。</p>
+        </div>
+        <div class="radio-controls">
+          <button class="play" id="speakBtn" title="再生 / 一時停止">▶</button>
+          <button class="round" id="stopBtn" title="停止">■</button>
+          <label>声
+            <select id="speechVoice" aria-label="読み上げ音声">
+              <option value="auto">おすすめを自動選択</option>
+            </select>
+          </label>
+          <label class="browser-rate">速度
+            <select id="speechRate" aria-label="読み上げ速度">
+              <option value="0.82">ゆっくり</option>
+              <option value="0.90" selected>自然</option>
+              <option value="1.00">標準</option>
+              <option value="1.12">少し速め</option>
+            </select>
+          </label>
+          <button class="voice-test" id="voiceTestBtn">声を試す</button>
+        </div>
+        <div class="voice-hint" id="voiceHint">🔊 読み上げは端末の無料音声を使います。音声生成の待ち時間はありません。</div>
+      </article>
+      <article class="transcript panel">
+        <div class="section-head">
+          <div><span class="eyebrow">TRANSCRIPT</span><h2>読み上げ原稿</h2><small id="radioMeta" class="radio-meta">Geminiが世界・日本の重要ニュースをまとめます。</small></div>
+          <div class="transcript-actions"><button class="ghost" id="radioRefreshBtn">✨ AIで原稿を作り直す</button><button class="ghost" id="copyBriefBtn">原稿をコピー</button></div>
+        </div>
+        <div id="briefText"></div>
+      </article>
+    </section>
+
+    <section class="page" id="page-news">
+      <div class="section-head"><div><span class="eyebrow">CURATED NEWS</span><h2>重要ニュース</h2></div><div class="filter-row" id="newsFilters"><button data-filter="all" class="active">すべて</button><button data-filter="日本">日本</button><button data-filter="米国">米国</button><button data-filter="世界">世界</button><button data-filter="FX">FX</button></div></div>
+      <div class="news-list" id="newsList"></div>
+    </section>
+
+
+    <section class="page" id="page-lifestyle">
+      <div class="section-head lifestyle-page-head"><div><span class="eyebrow">LIFE & TRAVEL</span><h2>今日の寄り道</h2><p>毎朝の勉強を続けやすくするための、旅行・温泉・地域の食・暮らしの工夫。経済ニュースとは別枠です。</p></div><span class="badge">楽しみ枠</span></div>
+      <div class="lifestyle-filter-row" id="lifestyleFilters">
+        <button data-life-filter="all" class="active">すべて</button>
+        <button data-life-filter="旅">旅</button>
+        <button data-life-filter="温泉">温泉・宿</button>
+        <button data-life-filter="食・地域">食・地域</button>
+        <button data-life-filter="暮らし">暮らし</button>
+      </div>
+      <div class="lifestyle-list" id="lifestyleList"></div>
+      <article class="panel lifestyle-note"><div class="eyebrow">HOW TO USE</div><h3>気になった記事だけでOK</h3><p>ここは勉強ではありません。朝に気分が上がる記事を1本見つける程度で十分です。旅行記事が地域経済やインバウンドにつながる場合は、経済ニュースとの関連も後から学べます。</p></article>
+    </section>
+
+    <section class="page" id="page-market">
+      <div class="section-head"><div><span class="eyebrow">MARKET VIEW</span><h2>市場チャート</h2></div><span class="badge" id="marketSourceBadge">デモデータ</span></div>
+      <article class="panel market-guide">
+        <div><b>まずは「値段」より「流れ」を見ます。</b><p>急に動いたところを見つけたら、その日のニュース・金利・中央銀行発言を確認します。売買シグナルではなく、ニュースと値動きを結びつける学習画面です。</p></div>
+      </article>
+      <section class="live-market-panel" aria-label="ライブ参考チャート">
+        <div class="live-market-head">
+          <div><span class="eyebrow">LIVE REFERENCE</span><h3>今日の市場をライブで確認</h3><p>当日の値動き確認用です。下の学習チャートとはデータ源が異なります。</p></div>
+          <span class="live-reference-badge">TradingView</span>
+        </div>
+        <div class="live-symbols" aria-label="ライブ市場を選択">
+          <button data-live-market="NIKKEI" class="active">日経225 ライブ</button>
+          <button data-live-market="USDJPY">ドル円 ライブ</button>
+        </div>
+        <div class="tradingview-live-chart" id="tradingviewLiveChart">
+          <div class="live-chart-loading">ライブチャートを読み込みます…</div>
+        </div>
+        <p class="live-market-note"><b>使い分け：</b> 上は「今日いまどう動いているか」を見る参考ライブ。下はFRED / Twelve Dataの履歴を使ってニュースと値動きを学ぶチャートです。</p>
+        <section class="ai-market-coach" id="aiMarketCoach">
+          <div class="ai-coach-head">
+            <div><span class="eyebrow">AI MARKET COACH</span><h3>🤖 AI先生にこのチャートを聞く</h3><p>同じ市場のAPIデータと今日のニュースを使って、初心者向けに説明します。</p></div>
+            <span class="ai-coach-status" id="aiCoachStatus">基本解説</span>
+          </div>
+          <div class="ai-coach-quick">
+            <button class="ghost ai-coach-q" data-coach-q="overview">このチャートを説明して</button>
+            <button class="ghost ai-coach-q" data-coach-q="move">今の値動きをどう見る？</button>
+            <button class="ghost ai-coach-q" data-coach-q="terms">ローソク足・出来高を教えて</button>
+            <button class="ghost ai-coach-q" data-coach-q="news">ニュースとの関係は？</button>
+          </div>
+          <div class="ai-coach-custom">
+            <input id="aiCoachQuestion" maxlength="180" placeholder="例：30分足と1時間足は何が違うの？">
+            <div class="ai-coach-actions"><button class="primary" id="aiCoachAskBtn">AI先生に聞く</button><button class="ai-coach-stop" id="aiCoachStopBtn" type="button" hidden>■ 停止</button></div>
+          </div>
+          <div class="ai-coach-answer" id="aiCoachAnswer">
+            <div class="ai-coach-placeholder"><b>最初はここだけ見ればOKです。</b><span>①価格の方向　②急に大きく動いた場所　③出来高が増えた場所。分からない用語はAI先生に聞いてください。</span></div>
+          </div>
+          <p class="ai-coach-disclaimer">※ TradingViewの埋め込み画面をAIが直接読み取るのではなく、MARKET COMPASSが取得した同市場データ・ニュースを基に解説します。売買推奨ではありません。</p>
+        </section>
+      </section>
+      <div class="market-toolbar">
+        <div class="market-symbols" aria-label="市場を選択"><button data-market-symbol="NIKKEI" class="active">日経平均</button><button data-market-symbol="USDJPY">ドル円</button></div>
+        <div class="market-periods" aria-label="表示期間"><button data-market-period="1w">1週間</button><button data-market-period="1m" class="active">1か月</button><button data-market-period="3m">3か月</button><button data-market-period="1y">1年</button></div>
+      </div>
+      <article class="market-detail">
+        <div class="market-detail-head">
+          <div><span class="eyebrow" id="detailMarketLabel">NIKKEI 225</span><h2 id="detailMarketName">日経平均</h2><div class="market-big-value"><strong id="detailMarketValue">--</strong><span id="detailMarketChange">--</span></div><div class="market-detail-source" id="detailMarketSource">データ源：--</div></div>
+          <div class="market-stats"><div><span>期間高値</span><b id="detailHigh">--</b></div><div><span>期間安値</span><b id="detailLow">--</b></div><div><span>最新日</span><b id="detailDate">--</b></div></div>
+        </div>
+        <div class="detail-market-chart" id="detailMarketChart" aria-label="市場の折れ線グラフ"></div>
+        <div class="market-axis-note"><span id="detailStartLabel"></span><span>日次終値</span><span id="detailEndLabel"></span></div>
+      </article>
+      <div class="two-col market-learning">
+        <article class="panel"><div class="eyebrow">HOW TO READ</div><h3>グラフで最初に見る3点</h3><ol class="clean numbered"><li>上昇・下降・横ばいのどれか</li><li>急変した日があるか</li><li>ニュースと方向が一致したか</li></ol></article>
+        <article class="panel"><div class="eyebrow">NEXT STEP</div><h3>急変したらニュースへ戻る</h3><p>「なぜここで動いた？」を考え、重要ニュースと因果関係の画面で理由を探します。</p><button class="ghost" data-goto="news">重要ニュースを見る</button></article>
+      </div>
+    </section>
+
+    <section class="page" id="page-drivers">
+      <div class="section-head"><div><span class="eyebrow">CAUSE → EFFECT</span><h2>相場の因果関係</h2></div></div>
+      <article class="panel"><p class="lead">値動きそのものより「なぜ動くのか」を覚えます。矢印は断定ではなく、一般的に働きやすい方向です。</p><div id="causeMap" class="cause-map"></div></article>
+      <div class="two-col">
+        <article class="panel"><h3>円安になりやすい材料</h3><ul class="clean" id="yenWeakList"></ul></article>
+        <article class="panel"><h3>円高になりやすい材料</h3><ul class="clean" id="yenStrongList"></ul></article>
+      </div>
+    </section>
+
+    <section class="page" id="page-learn">
+      <div class="section-head"><div><span class="eyebrow">ROADMAP</span><h2>初心者 → 実践者ロードマップ</h2></div><span class="badge">数年かけて育てる</span></div>
+      <div id="roadmap" class="roadmap"></div>
+    </section>
+
+    <section class="page" id="page-practice">
+      <div class="section-head"><div><span class="eyebrow">PRACTICE DESK</span><h2>模擬判断トレーニング</h2></div><span class="badge">お金は使いません</span></div>
+      <div class="practice-grid">
+        <article class="panel">
+          <h3>今日のドル円</h3>
+          <p>今ある材料だけなら、次の24時間はどちらに傾くと思いますか？</p>
+          <div class="choice-row" data-market="USDJPY"><button data-choice="円安">円安</button><button data-choice="中立">中立</button><button data-choice="円高">円高</button></div>
+          <textarea id="reasonUSDJPY" placeholder="理由を自分の言葉で書く（例：米金利が上がりそうだから）"></textarea>
+          <label class="range-label">自信度 <input type="range" id="confidenceUSDJPY" min="1" max="5" value="3"><span id="confidenceUSDJPYLabel">3/5</span></label>
+          <button class="primary save-prediction" data-market="USDJPY">予想を保存</button>
+        </article>
+        <article class="panel">
+          <h3>今日の日経平均</h3>
+          <p>ニュース・為替・金利を見て、自分なりに方向を考えます。</p>
+          <div class="choice-row" data-market="NIKKEI"><button data-choice="上昇">上昇</button><button data-choice="中立">中立</button><button data-choice="下落">下落</button></div>
+          <textarea id="reasonNIKKEI" placeholder="理由を自分の言葉で書く"></textarea>
+          <label class="range-label">自信度 <input type="range" id="confidenceNIKKEI" min="1" max="5" value="3"><span id="confidenceNIKKEILabel">3/5</span></label>
+          <button class="primary save-prediction" data-market="NIKKEI">予想を保存</button>
+        </article>
+      </div>
+      <article class="panel"><h3>直近の予想履歴</h3><div id="predictionHistory"></div></article>
+    </section>
+
+    <section class="page" id="page-journal">
+      <div class="section-head"><div><span class="eyebrow">MARKET JOURNAL</span><h2>投資・FX判断ノート</h2></div></div>
+      <article class="panel journal-form">
+        <label>今日気になったこと<textarea id="journalNote" placeholder="ニュース、疑問、気づき、失敗しそうだと思ったことなど"></textarea></label>
+        <label>今日わかったこと<textarea id="journalLearn" placeholder="例：米国金利が上がるとドルが買われやすい"></textarea></label>
+        <label>明日確認すること<input id="journalNext" placeholder="例：米CPI発表後のドル円"></label>
+        <button class="primary" id="saveJournalBtn">今日の記録を保存</button>
+      </article>
+      <div id="journalHistory"></div>
+    </section>
+
+    <section class="page" id="page-terms">
+      <div class="section-head"><div><span class="eyebrow">GLOSSARY</span><h2>初心者向け経済用語</h2></div><input class="search" id="termSearch" placeholder="用語を検索"></div>
+      <div class="term-grid" id="termGrid"></div>
+    </section>
+
+    <section class="page" id="page-settings">
+      <div class="section-head"><div><span class="eyebrow">ONE-TIME SETUP</span><h2>初期設定・PC/スマホ同期</h2></div><span class="badge">基本はPCで1回だけ</span></div>
+      <article class="panel setup-card setup-main">
+        <h3>普段はこの画面を触らなくてOKです</h3>
+        <p>ニュース取得・AI音声・学習データの保存先をGASにまとめます。設定後は、スマホではホーム・ラジオ・ニュース・練習を使うだけです。</p>
+        <div class="sync-state-row"><span class="sync-led" id="syncLed"></span><div><b id="syncTitle">デモモード</b><small id="syncDetail">まだクラウド同期していません。</small></div></div>
+        <label>GAS WebアプリURL<input id="backendUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
+        <label>同期コード<input id="syncToken" type="password" autocomplete="off" placeholder="GASの setupMarketCompass で発行されるコード"></label>
+        <div class="hero-actions"><button class="primary" id="saveBackendBtn">保存して接続・同期</button><button class="ghost" id="syncNowBtn">今すぐ同期</button><button class="ghost" id="clearBackendBtn">デモに戻す</button></div>
+        <div id="connectionMessage" class="connection-message"></div>
+      </article>
+      <article class="panel desktop-view-card">
+        <div class="desktop-view-row">
+          <div class="desktop-view-copy">
+            <div class="eyebrow">DESKTOP VIEW</div>
+            <h3>PCの表示サイズ</h3>
+            <p>PCでは初期値を60％相当にして一覧性を上げます。左メニューやカード枠は縮小しても画面下まで崩れないよう補正します。スマホ・タブレットは100％のままです。</p>
+          </div>
+          <div class="desktop-view-control">
+            <label for="desktopScale">PC表示</label>
+            <select id="desktopScale">
+              <option value="0.50">50％（かなりコンパクト）</option>
+              <option value="0.60">60％（おすすめ）</option>
+              <option value="0.65">65％</option>
+              <option value="0.70">70％</option>
+              <option value="0.80">80％</option>
+              <option value="1.00">100％</option>
+            </select>
+          </div>
+        </div>
+        <div class="desktop-view-note">MARKET COMPASS内だけを縮小します。もしGitHub Pages公開後にChromeの実際の70％表示を使う場合は、アプリ側は100％に戻してChrome側のズームを設定するのが最も正確です。</div>
+      </article>
+      <article class="panel phone-link-card">
+        <div class="eyebrow">SMARTPHONE</div>
+        <h3>スマホ接続を簡単にする</h3>
+        <p>公開後は、PCで設定したGAS URLと同期コードを含む「スマホ初回接続リンク」を作れます。スマホではそのリンクを1回開けば設定が保存されます。</p>
+        <button class="ghost" id="phoneLinkBtn">スマホ初回接続リンクを作る</button>
+        <div class="phone-link-output" id="phoneLinkOutput"></div>
+      </article>
+      <article class="panel">
+        <h3>自動で共有されるもの</h3>
+        <div class="source-grid sync-grid"><div><b>予想履歴</b><span>ドル円・日経平均の判断</span></div><div><b>判断ノート</b><span>気づき・学び・次の確認</span></div><div><b>学習進捗</b><span>覚えた用語・学習日数</span></div><div><b>ニュース・市場</b><span>同じGASから共通取得</span></div></div>
+      </article>
+      <article class="panel">
+        <h3>このOSが使うデータ</h3>
+        <div class="source-grid"><div><b>Currents / GDELT</b><span>日本・世界のニュース</span></div><div><b>FRED</b><span>経済指標・日経平均・ドル円</span></div><div><b>Gemini</b><span>ニュース要約・チャートAI先生</span></div><div><b>Google AI音声</b><span>朝の経済ラジオ</span></div></div>
+      </article>
+    </section>
+  </main>
+</div>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<nav class="mobile-dock" id="mobileDock" aria-label="スマホ用メニュー">
+  <button data-mobile-page="home" class="active" aria-current="page"><span class="dock-icon">⌂</span><b>ホーム</b><i class="nav-dot"></i></button>
+  <button data-mobile-page="brief" id="dockBriefBtn"><span class="dock-icon">▶</span><b>ラジオ</b><i class="nav-dot"></i><em class="mini-note">再生中</em></button>
+  <button data-mobile-page="news" id="dockNewsBtn" class="has-dot"><span class="dock-icon">▤</span><b>ニュース</b><i class="nav-dot"></i></button>
+  <button data-mobile-page="practice"><span class="dock-icon">◎</span><b>練習</b><i class="nav-dot"></i></button>
+  <button id="mobileMoreBtn"><span class="dock-icon">☰</span><b>その他</b><i class="nav-dot"></i></button>
+</nav>
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
