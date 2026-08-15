@@ -1,6 +1,6 @@
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js';
-import { getAuth, setPersistence, browserLocalPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
+import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js';
 
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const state={data:null,markets:null,marketPeriod:'1m',marketSymbol:'NIKKEI',liveMarketSymbol:'NIKKEI',filter:'all',lifeFilter:'all',choices:{},backend:localStorage.getItem('mc_backend')||'',syncToken:localStorage.getItem('mc_sync_token')||'',syncTimer:null,syncBusy:false,lastSync:null,speechRun:0,speechPaused:false,speechOwner:null,sectionSpeechEl:null,audio:null,audioQueue:[],audioIndex:0,coachCancel:null,coachBusy:false};
@@ -111,7 +111,7 @@ async function boot(){
  applySetupFromUrl();bindLoginGate();showLoginGate();
  if(!firebaseConfigReady()){setLoginStatus('Firebase初期設定が未完了です。firebase-config.jsを設定してください。','error');return}
  try{
-  const fbApp=initializeApp(firebaseConfig);firebaseAuth=getAuth(fbApp);await setPersistence(firebaseAuth,browserLocalPersistence);
+  const fbApp=initializeApp(firebaseConfig);firebaseAuth=initializeAuth(fbApp,{persistence:[indexedDBLocalPersistence,browserLocalPersistence]});
   onAuthStateChanged(firebaseAuth,async user=>{
    if(!user){appInitialized=false;showLoginGate();return}
    hideLoginGate();
@@ -710,4 +710,4 @@ boot();
 // v1.9.11: 円安・円高の材料カードも描画完了後に無料読み上げへ対応。
 // v1.9.19: Firebaseログイン失敗時に実際の診断コードを画面表示し、原因を特定できるよう改善。
 // v1.9.18: Firebase Authentication本番設定を組み込み。GitHub Pagesの承認済みドメインからメール/パスワードでログイン可能。
-// v1.9.17: Firebaseの独自60日再ログイン制限を廃止。browserLocalPersistenceにより通常は明示的なログアウトまで認証状態を保持。
+// v1.9.20: GitHub PagesでlocalStorage容量超過が起きるため、Firebase AuthはIndexedDB優先のLOCAL永続化へ変更。通常は明示的なログアウトまで認証状態を保持。
