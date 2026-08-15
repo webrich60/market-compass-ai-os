@@ -4,11 +4,35 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b5bd3">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
+  <meta name="googlebot" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
+  <meta name="bingbot" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
+  <meta name="referrer" content="no-referrer">
   <title>MARKET COMPASS AI OS</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<div class="login-gate" id="loginGate" hidden>
+  <div class="login-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <div class="login-brand"><div class="brand-mark">MC</div><div><strong>MARKET COMPASS</strong><span>PRIVATE ACCESS</span></div></div>
+    <div class="eyebrow">簡易ログイン</div>
+    <h1 id="loginTitle">PINを入力してください</h1>
+    <p>この端末ではログイン後60日間保持します。PINはGitHubには保存されず、GAS側で確認します。</p>
+    <label>ログインPIN<input id="loginPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" placeholder="PIN"></label>
+    <button class="primary login-submit" id="loginSubmitBtn">ログイン</button>
+    <div class="login-status" id="loginStatus">PINを入力してログインしてください。</div>
+    <details class="login-setup" id="loginSetup">
+      <summary>初回だけ：接続情報を設定</summary>
+      <label>GAS WebアプリURL<input id="loginBackendUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
+      <label>同期コード<input id="loginSyncToken" type="password" autocomplete="off" placeholder="同期コード"></label>
+      <button class="ghost" id="loginSaveConnectionBtn" type="button">接続情報を保存</button>
+      <small>GitHub Pagesを初めて開くPCではここを1回だけ設定します。スマホ初回接続リンクから開いた場合は自動設定されます。</small>
+    </details>
+    <small class="login-note">※ 簡易PINロックです。GitHub Pages自体を非公開にする機能ではありません。検索エンジンのnoindex設定も併用しています。</small>
+  </div>
+</div>
+
 <div class="app-shell">
   <aside class="sidebar" id="sidebar">
     <div class="brand">

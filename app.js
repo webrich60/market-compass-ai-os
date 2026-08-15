@@ -40,6 +40,44 @@ const roadmap=[
  {n:5,title:'自分の型を持つ',period:'30か月〜',items:['得意市場と時間軸を限定','売買しない判断もルール化','四半期ごとに戦略を再検証','感情ではなく再現性を優先']}
 ];
 const cause=['インフレ上振れ','利下げ期待が後退','金利上昇圧力','ドル買い要因','ドル円の円安要因'];
+const AUTH_UNTIL_KEY='mc_auth_until';
+function authIsValid(){return Number(localStorage.getItem(AUTH_UNTIL_KEY)||0)>Date.now()}
+function setLoginStatus(text,mode=''){const el=$('#loginStatus');if(!el)return;el.textContent=text;el.className='login-status'+(mode?' '+mode:'')}
+function showLoginGate(){
+ const gate=$('#loginGate');if(!gate)return;
+ document.body.classList.add('login-locked');gate.hidden=false;
+ const b=$('#loginBackendUrl'),t=$('#loginSyncToken');if(b)b.value=state.backend||'';if(t)t.value=state.syncToken||'';
+ setTimeout(()=>$('#loginPin')?.focus(),80);
+}
+function hideLoginGate(){const gate=$('#loginGate');if(gate)gate.hidden=true;document.body.classList.remove('login-locked')}
+function saveLoginConnection(){
+ const u=$('#loginBackendUrl')?.value.trim()||'',token=$('#loginSyncToken')?.value.trim()||'';
+ if(!u||!/^https:\/\/script\.google\.com\//.test(u))return setLoginStatus('GAS WebアプリURLを確認してください。','error');
+ if(token.length<6)return setLoginStatus('同期コードを入力してください。','error');
+ localStorage.setItem('mc_backend',u);localStorage.setItem('mc_sync_token',token);state.backend=u;state.syncToken=token;setLoginStatus('接続情報を保存しました。PINを入力してください。','ok');
+}
+function loginWithPin(){
+ const pin=$('#loginPin')?.value.trim()||'';if(!pin)return setLoginStatus('PINを入力してください。','error');
+ if(!state.backend)return setLoginStatus('初回接続設定でGAS WebアプリURLを保存してください。','error');
+ const btn=$('#loginSubmitBtn');if(btn){btn.disabled=true;btn.textContent='確認中…'};setLoginStatus('PINを確認しています…');
+ const sep=state.backend.includes('?')?'&':'?';const url=state.backend+sep+'action=login&pin='+encodeURIComponent(pin);
+ gasRequest(url,d=>{
+  if(btn){btn.disabled=false;btn.textContent='ログイン'}
+  if(!d||d.ok!==true)return setLoginStatus(d?.error||'PINが一致しません。','error');
+  localStorage.setItem(AUTH_UNTIL_KEY,String(Date.now()+60*24*60*60*1000));
+  setLoginStatus('ログインしました。','ok');hideLoginGate();init();
+ },err=>{if(btn){btn.disabled=false;btn.textContent='ログイン'};console.warn('login',err);setLoginStatus('GASへ接続できませんでした。接続情報を確認してください。','error')},12000);
+}
+function logoutSimple(){localStorage.removeItem(AUTH_UNTIL_KEY);stopSpeech?.();location.reload()}
+function bindLoginGate(){
+ $('#loginSubmitBtn')?.addEventListener('click',loginWithPin);
+ $('#loginPin')?.addEventListener('keydown',e=>{if(e.key==='Enter')loginWithPin()});
+ $('#loginSaveConnectionBtn')?.addEventListener('click',saveLoginConnection);
+}
+function boot(){
+ applySetupFromUrl();bindLoginGate();
+ if(authIsValid()){hideLoginGate();init()}else showLoginGate();
+}
 function init(){
  applyDesktopScale();
  initReadAloudControls();
@@ -113,6 +151,7 @@ function bindActions(){
  $('#syncNowBtn')?.addEventListener('click',()=>cloudSync(false));
  $('#phoneLinkBtn')?.addEventListener('click',buildPhoneSetupLink);
  $('#clearBackendBtn').onclick=()=>{localStorage.removeItem('mc_backend');localStorage.removeItem('mc_sync_token');state.backend='';state.syncToken='';$('#backendUrl').value='';$('#syncToken').value='';stopCloudSync();setSyncStatus('demo','未接続','クラウド同期を停止しました。');setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline');$('#connectionMessage').textContent='接続を解除しました。';renderData(DEMO);state.markets=DEMO_MARKETS;renderMarkets()};
+ $('#logoutBtn')?.addEventListener('click',logoutSimple);
  $('#backendUrl').value=state.backend;$('#syncToken').value=state.syncToken;setSyncStatus(state.backend&&state.syncToken?'busy':'demo',state.backend&&state.syncToken?'接続準備済み':'デモモード',state.backend&&state.syncToken?'同期を確認します。':'まだクラウド同期していません。');
  if(state.backend&&state.syncToken){setApiStatus('busy');setLastUpdated(null,'busy');setRefreshButton('busy')}else{setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline')}
  $$('#newsFilters button').forEach(b=>b.onclick=()=>{$$('#newsFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.filter=b.dataset.filter;renderNews()});
@@ -606,7 +645,7 @@ function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show')
 function fmt(d){return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(d))}
 function esc(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function safeUrl(u){try{const x=new URL(u);return ['http:','https:'].includes(x.protocol)?x.href:'#'}catch{return '#'}}
-init();
+boot();
 // v1.8.0: TradingViewライブ参考チャートを追加。履歴チャートと当日確認を分離。
 
 // v1.8.1: PC default display density 70%, selectable 60/70/80/100; mobile stays 100%.
