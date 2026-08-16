@@ -1,4 +1,4 @@
-const CACHE='market-compass-v1.13.0';
+const CACHE='market-compass-v1.14.0';
 const FILES=['./','./index.html','./styles.css','./app.js','./firebase-config.js','./manifest.json'];
 self.addEventListener('install',event=>{
   self.skipWaiting();

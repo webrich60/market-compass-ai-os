@@ -47,9 +47,9 @@
       <button data-page="lifestyle">☕ 今日の寄り道</button>
       <button data-page="market">📈 市場チャート</button>
       <button data-page="drivers">🧭 相場の因果関係</button>
-      <button data-page="learn">🎓 学習・情報分析</button>
+      <button data-page="learn">🎓 YouTube・学習情報</button>
       <button data-page="practice">🧪 模擬判断トレーニング</button>
-      <button data-page="trade">💹 実践ステップ</button>
+      <button data-page="trade">💹 証券会社・デモ口座</button>
       <button data-page="journal">📒 投資・FX判断ノート</button>
       <button data-page="terms">📚 経済用語辞典</button>
       <button data-page="notebook">🧠 NotebookLM連携</button>
@@ -109,6 +109,18 @@
 
       <div class="section-head"><div><span class="eyebrow">TOP STORIES</span><h2>まず読む5本</h2></div><button class="text-btn" data-goto="news">すべて見る →</button></div>
       <div class="news-grid" id="topNews"></div>
+
+      <div class="section-head home-broker-head"><div><span class="eyebrow">5 BROKERS / 5 ROLES</span><h2>証券会社・デモ口座 5社</h2><p>練習・超少額・本命・FX・短期研究で役割を分けています。口座IDやパスワードは保存しません。</p></div><button class="text-btn" data-goto="trade">選んだ理由を見る →</button></div>
+      <div class="broker-quick-grid">
+        <article><span>🧪 0円デモ</span><b>moomoo証券</b><small>株の注文・チャート練習</small><a href="https://www.moomoo.com/jp/papertrading" target="_blank" rel="noopener noreferrer">デモへ ↗</a></article>
+        <article><span>🌱 100円〜</span><b>PayPay証券</b><small>超少額で実戦心理を経験</small><a href="https://www.paypay-sec.co.jp/login/" target="_blank" rel="noopener noreferrer">ログイン ↗</a></article>
+        <article class="main"><span>🏦 将来の本命</span><b>SBI証券</b><small>1株・NISA・長期運用</small><a href="https://www.sbisec.co.jp/ETGate" target="_blank" rel="noopener noreferrer">ログイン ↗</a></article>
+        <article><span>💱 FXデモ</span><b>GMOクリック証券</b><small>ドル円・経済指標の練習</small><a href="https://www.click-sec.com/corp/guide/fxneo/demo/" target="_blank" rel="noopener noreferrer">FXデモ ↗</a></article>
+        <article><span>⚡ 短期研究</span><b>DMM 株</b><small>必要になってから研究用</small><a href="https://kabu.dmm.com/" target="_blank" rel="noopener noreferrer">公式へ ↗</a></article>
+      </div>
+
+      <div class="section-head home-learning-head"><div><span class="eyebrow">AUTO LEARNING FEED</span><h2>最新の公式YouTube学習情報</h2><p>朝・昼・夜のニュース更新時に、日本銀行・財務省・金融庁・J-FLEC・JPX・IMFの公式動画候補も自動収集します。</p></div><button class="text-btn" data-goto="learn">学習ページへ →</button></div>
+      <div class="learning-feed-list home-learning-feed" id="homeLearningFeed"><article class="panel">GAS接続後、公式学習動画を自動表示します。</article></div>
 
       <div class="section-head lifestyle-head"><div><span class="eyebrow">MORNING DETOUR</span><h2>☕ 今日の寄り道</h2><p>経済から少し離れて、旅・温泉・地域・暮らしの面白い記事を少しだけ。</p></div><button class="text-btn" data-goto="lifestyle">もっと見る →</button></div>
       <div class="lifestyle-grid" id="homeLifestyle"></div>
@@ -259,7 +271,7 @@
       <div class="section-head"><div><span class="eyebrow">ROADMAP</span><h2>初心者 → 実践者ロードマップ</h2><p>ニュースだけでなく、公式動画・教材・記事を使って「分かったつもり」を減らします。</p></div><span class="badge">毎日少しずつ</span></div>
       <div id="roadmap" class="roadmap"></div>
 
-      <div class="section-head"><div><span class="eyebrow">LATEST OFFICIAL VIDEOS</span><h2>最近の公式学習動画を拾う</h2><p>日本銀行・財務省・金融庁・J-FLECの公式YouTubeから新しい動画候補を取得します。YouTube APIキーは使いません。</p></div><button class="ghost" id="learningFeedRefreshBtn">↻ 学習動画を更新</button></div>
+      <div class="section-head"><div><span class="eyebrow">LATEST OFFICIAL VIDEOS</span><h2>公式YouTubeを自動収集</h2><p>日本銀行・財務省・金融庁・J-FLEC・JPX・IMFから新しい経済・金融動画候補を取得します。6:30・12:30・18:30ごろのニュース自動更新時にも収集し、YouTube APIキーは使いません。</p></div><div class="learning-feed-actions"><span class="badge">朝・昼・夜 自動</span><button class="ghost" id="learningFeedRefreshBtn">↻ 今すぐ動画更新</button></div></div>
       <div class="learning-feed-list" id="learningFeedList"><article class="panel">GAS接続後、公式チャンネルの最新動画を表示します。</article></div>
 
       <div class="section-head"><div><span class="eyebrow">CURATED LEARNING</span><h2>信頼できる学習情報</h2><p>YouTubeは煽り動画より、まず公的・一次情報を土台にします。そこから民間の解説へ広げます。</p></div><span class="badge">無料中心</span></div>
@@ -268,7 +280,8 @@
         <article class="learning-source-card"><span class="source-kind">YouTube・財政</span><h3>財務省 / MOFJapan</h3><p>日本の財政・税・国債などを公式資料と動画で確認します。政策ニュースの背景理解に使います。</p><a class="ghost" href="https://www.youtube.com/user/MOFJapan/playlists" target="_blank" rel="noopener noreferrer">公式動画を見る ↗</a></article>
         <article class="learning-source-card"><span class="source-kind">YouTube・金融教育</span><h3>J-FLEC</h3><p>中立・公正な金融経済教育を土台に、株・債券・投資信託・資産形成の基礎を学びます。</p><a class="ghost" href="https://www.youtube.com/@j-flec/videos" target="_blank" rel="noopener noreferrer">公式動画を見る ↗</a></article>
         <article class="learning-source-card"><span class="source-kind">YouTube・制度</span><h3>金融庁チャンネル</h3><p>NISAや資産形成、金融制度を公式側から確認します。制度変更の確認先としても使います。</p><a class="ghost" href="https://www.youtube.com/channel/UCpIgZIDc-ptkZZTvzqlwGQg/videos" target="_blank" rel="noopener noreferrer">公式動画を見る ↗</a></article>
-        <article class="learning-source-card"><span class="source-kind">教材・市場</span><h3>日本取引所グループ（JPX）</h3><p>株式市場・TOPIX・取引所の仕組みを、市場運営者の資料から確認します。</p><a class="ghost" href="https://www.jpx.co.jp/corporate/learning/education/index.html" target="_blank" rel="noopener noreferrer">金融経済教育を見る ↗</a></article>
+        <article class="learning-source-card"><span class="source-kind">YouTube・市場</span><h3>日本取引所グループ（JPX）</h3><p>株式市場・TOPIX・取引所の仕組みや投資教育を、市場運営者の公式動画・資料から確認します。</p><div class="source-links"><a class="ghost" href="https://www.youtube.com/channel/UCnZA74T8a8dEbavWRq8F2nA/videos" target="_blank" rel="noopener noreferrer">公式動画 ↗</a><a class="ghost" href="https://www.jpx.co.jp/corporate/learning/education/index.html" target="_blank" rel="noopener noreferrer">教材 ↗</a></div></article>
+        <article class="learning-source-card"><span class="source-kind">YouTube・世界経済</span><h3>IMF</h3><p>世界経済見通し・成長率・インフレなど、日本だけでは見えにくい世界経済の流れを公式情報で補います。</p><a class="ghost" href="https://www.youtube.com/imf" target="_blank" rel="noopener noreferrer">IMF公式動画 ↗</a></article>
         <article class="learning-source-card"><span class="source-kind">無料教材</span><h3>J-FLEC 金融教材</h3><p>動画・マンガ・教材で基礎を補強。分からない用語が続いた時の「戻る場所」にします。</p><a class="ghost" href="https://www.j-flec.go.jp/materials/" target="_blank" rel="noopener noreferrer">無料教材を見る ↗</a></article>
       </div>
 

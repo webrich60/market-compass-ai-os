@@ -170,7 +170,7 @@ function init(){
  $('#todayLabel').textContent=new Intl.DateTimeFormat('ja-JP',{dateStyle:'full'}).format(new Date());
  bindNav();bindActions();initSpeechControls();renderRoadmap();renderTerms();loadLocalStats();loadJournal();loadPredictions();renderData(DEMO);state.markets=DEMO_MARKETS;renderMarkets();if(!state.backend||!state.syncToken){setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline')}else{setApiStatus('busy');setLastUpdated(null,'busy');setRefreshButton('busy')};
  updateMobileDock();
- if(state.backend){fetchBackend();if(state.syncToken){cloudSync(true);startCloudSync();startNewsAutoPoll()}}
+ if(state.backend){fetchBackend();if(state.syncToken){cloudSync(true);startCloudSync();startNewsAutoPoll();setTimeout(()=>fetchLearningFeed(false),1400)}}
  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 function applyDesktopScale(){
@@ -225,7 +225,7 @@ function bindActions(){
  $('#speakBtn').onclick=toggleSpeech;
  $('#stopBtn').onclick=stopSpeech;
  $('#voiceTestBtn').onclick=testVoice;
- $('#copyBriefBtn').onclick=()=>navigator.clipboard?.writeText(state.data?.brief||'').then(()=>toast('原稿をコピーしました'));
+ $('#copyBriefBtn').onclick=()=>navigator.clipboard?.writeText(cleanRadioTextClient(state.data?.brief||'')).then(()=>toast('原稿をコピーしました'));
  $('#radioRefreshBtn').onclick=regenerateRadioScript;
  $('#speechRate').onchange=e=>safeStorageSet('mc_speech_rate',e.target.value);
  $$('.choice-row button').forEach(b=>b.onclick=()=>{let row=b.parentElement;row.querySelectorAll('button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');state.choices[row.dataset.market]=b.dataset.choice;});
@@ -244,7 +244,9 @@ function bindActions(){
  ['#topNews','#newsList'].forEach(sel=>$(sel)?.addEventListener('click',e=>{const b=e.target.closest('.news-ai-btn');if(b)askNewsExplain(Number(b.dataset.newsIndex||0),b)}));
  ['#newsHistoryPicker','#radioHistoryPicker'].forEach(sel=>$(sel)?.addEventListener('click',e=>{const latest=e.target.closest('[data-history-latest]');if(latest){restoreLatestBrief();return}const b=e.target.closest('[data-history-row]');if(b)loadBriefHistoryRow(Number(b.dataset.historyRow||0))}));
  $('#learningFeedRefreshBtn')?.addEventListener('click',()=>fetchLearningFeed(true));
- $('#learningFeedList')?.addEventListener('click',e=>{const b=e.target.closest('[data-learning-pick]');if(!b)return;const item=state.learningFeed[Number(b.dataset.learningPick||0)];if(!item)return;if($('#learningUrl'))$('#learningUrl').value=item.url||'';if($('#learningNote'))$('#learningNote').value=`${item.source||''} / ${item.title||''}`;$('#learningUrl')?.scrollIntoView({behavior:'smooth',block:'center'});toast('URLをAI分析欄へ送りました')});
+ const learningPickHandler=e=>{const b=e.target.closest('[data-learning-pick]');if(!b)return;const item=state.learningFeed[Number(b.dataset.learningPick||0)];if(!item)return;if($('#learningUrl'))$('#learningUrl').value=item.url||'';if($('#learningNote'))$('#learningNote').value=[item.source||'',item.title||'',item.description||''].filter(Boolean).join(' / ').slice(0,1200);showPage('learn');setTimeout(()=>$('#learningUrl')?.scrollIntoView({behavior:'smooth',block:'center'}),80);toast('動画をAI分析欄へ送りました')};
+ $('#learningFeedList')?.addEventListener('click',learningPickHandler);
+ $('#homeLearningFeed')?.addEventListener('click',learningPickHandler);
  $('#analyzeLearningBtn')?.addEventListener('click',analyzeLearningResource);
  $('#clearLearningBtn')?.addEventListener('click',()=>{if($('#learningUrl'))$('#learningUrl').value='';if($('#learningNote'))$('#learningNote').value='';if($('#learningAnalysisResult'))$('#learningAnalysisResult').innerHTML='<div class="ai-coach-placeholder"><b>使い方</b><span>URLを貼ってAI分析を押してください。</span></div>'});
  $('#buildChatgptPromptBtn')?.addEventListener('click',()=>{const t=buildChatgptDecisionPrompt();if($('#chatgptPromptPreview'))$('#chatgptPromptPreview').value=t;toast('ChatGPT相談文を作りました')});
@@ -455,15 +457,21 @@ function askNewsExplain(idx){
  gasRequest(url,d=>{setNewsExplainBusy(idx,false);if(!d||d.ok===false)throw new Error(d?.error||'AI解説失敗');renderNewsExplain(idx,d)},err=>{console.warn('news explain',err);setNewsExplainBusy(idx,false);toast('Gemini追加解説は取得できませんでした。基本解説を表示しています')},22000);
 }
 
+function learningFeedCards(rows,limit){
+ const list=(rows||[]).slice(0,limit||rows.length);
+ return list.length?list.map((x,i)=>`<article class="learning-feed-card"><div class="learning-feed-meta"><span class="source-kind">${esc(x.source||'公式')}</span><span>${esc(x.publishedLabel||x.published||'')}</span></div><h3>${esc(x.title||'')}</h3>${x.description?`<p>${esc(String(x.description).slice(0,180))}</p>`:''}<div class="hero-actions"><a class="ghost" href="${safeUrl(x.url)}" target="_blank" rel="noopener noreferrer">動画を見る ↗</a><button class="primary small" data-learning-pick="${i}">AI分析へ送る</button></div></article>`).join(''):'';
+}
 function renderLearningFeed(){
- const el=$('#learningFeedList');if(!el)return;const rows=state.learningFeed||[];
- el.innerHTML=rows.length?rows.map((x,i)=>`<article class="learning-feed-card"><div class="learning-feed-meta"><span class="source-kind">${esc(x.source||'公式')}</span><span>${esc(x.publishedLabel||x.published||'')}</span></div><h3>${esc(x.title||'')}</h3><div class="hero-actions"><a class="ghost" href="${safeUrl(x.url)}" target="_blank" rel="noopener noreferrer">動画を見る ↗</a><button class="primary small" data-learning-pick="${i}">AI分析へ送る</button></div></article>`).join(''):'<article class="panel">新しい公式動画を取得できませんでした。上の公式チャンネルリンクから直接確認できます。</article>';
+ const rows=state.learningFeed||[],page=$('#learningFeedList'),home=$('#homeLearningFeed');
+ if(page)page.innerHTML=learningFeedCards(rows,12)||'<article class="panel">新しい公式動画を取得できませんでした。固定の公式リンクはそのまま利用できます。</article>';
+ if(home)home.innerHTML=learningFeedCards(rows,3)||'<article class="panel">GAS接続後、朝・昼・夜の更新時に公式YouTube候補を自動収集します。</article>';
 }
 function fetchLearningFeed(force=false){
- const el=$('#learningFeedList'),b=$('#learningFeedRefreshBtn');if(!state.backend||!state.syncToken){if(el)el.innerHTML='<article class="panel">GAS接続後に最新動画を取得できます。</article>';return}
+ const page=$('#learningFeedList'),home=$('#homeLearningFeed'),b=$('#learningFeedRefreshBtn');
+ if(!state.backend||!state.syncToken){if(page)page.innerHTML='<article class="panel">GAS接続後に最新動画を取得できます。</article>';if(home)home.innerHTML='<article class="panel">GAS接続後、公式YouTube候補を自動収集します。</article>';return}
  if(!force&&state.learningFeed.length&&Date.now()-state.learningFeedFetchedAt<30*60*1000){renderLearningFeed();return}
- if(b){b.disabled=true;b.textContent='取得中…'};if(el)el.innerHTML='<article class="panel">日本銀行・財務省・金融庁・J-FLECから最新動画を確認しています…</article>';
- gasRequest(gasUrl('learningFeed',{}),d=>{if(b){b.disabled=false;b.textContent='↻ 学習動画を更新'};if(!d||d.ok===false)throw new Error(d?.error||'取得失敗');state.learningFeed=d.items||[];state.learningFeedFetchedAt=Date.now();renderLearningFeed();if(force)toast('公式学習動画を更新しました')},err=>{console.warn('learning feed',err);if(b){b.disabled=false;b.textContent='↻ 学習動画を更新'};if(el)el.innerHTML='<article class="panel">公式動画の取得に失敗しました。固定の公式リンクはそのまま利用できます。</article>';if(force)toast('学習動画を取得できませんでした')},22000);
+ if(b){b.disabled=true;b.textContent='取得中…'};if(page)page.innerHTML='<article class="panel">日本銀行・財務省・金融庁・J-FLEC・JPX・IMFから最新動画を確認しています…</article>';
+ gasRequest(gasUrl('learningFeed',{force:force?'1':'0'}),d=>{if(b){b.disabled=false;b.textContent='↻ 今すぐ動画更新'};if(!d||d.ok===false)throw new Error(d?.error||'取得失敗');state.learningFeed=d.items||[];state.learningFeedFetchedAt=Date.now();renderLearningFeed();if(force)toast('公式YouTube学習情報を更新しました')},err=>{console.warn('learning feed',err);if(b){b.disabled=false;b.textContent='↻ 今すぐ動画更新'};if(page)page.innerHTML='<article class="panel">公式動画の取得に失敗しました。固定の公式リンクはそのまま利用できます。</article>';if(home)home.innerHTML='<article class="panel">YouTube自動収集を確認できませんでした。</article>';if(force)toast('学習動画を取得できませんでした')},26000);
 }
 function renderLearningAnalysis(d){
  const el=$('#learningAnalysisResult');if(!el)return;
@@ -509,8 +517,19 @@ function renderLifestyle(){
  const list=$('#lifestyleList');if(!list)return;const f=state.lifeFilter||'all';const rows=all.filter(n=>f==='all'||lifeCategoryLabel(n.category)===f);
  list.innerHTML=rows.map(lifestyleCard).join('')||'<article class="panel">今日はこのカテゴリの記事がありません。無理に埋めず、良い記事がある日だけ表示します。</article>';
 }
+function cleanRadioTextClient(text){
+ let t=String(text||'').replace(/\r/g,'').trim();
+ t=t.replace(/^```[^\n]*\n?/,'').replace(/```$/,'').trim();
+ t=t.replace(/[（(【\[][^\n）)】\]]{0,80}(オープニング|エンディング|テーマ曲?|BGM|bgm|効果音|ジングル|音楽|SE|se)[^\n）)】\]]{0,80}[）)】\]]/g,'');
+ t=t.replace(/^(?:はい[、, ]*)?(?:承知|了解)(?:いたしました|しました|です)[。！!、, ]*/,'');
+ t=t.replace(/^「?MARKET COMPASS[^\n]{0,100}(?:編集者|原稿作家)[^\n]{0,100}[。！!]?」?[\n ]*/,'');
+ t=t.replace(/^(?:以下|それでは)[^\n]{0,100}(?:原稿|ラジオ原稿|作成)[^\n]{0,100}[。！!]?[\n ]*/,'');
+ t=t.split('\n').map(x=>x.trim()).filter(x=>!/^[-_*]{3,}$/.test(x)&&!/^(?:台本|原稿|オープニング|エンディング|ナレーション)[:：]/.test(x)).join('\n').replace(/\n{3,}/g,'\n\n').trim();
+ const m=t.match(/(?:おはようございます。|こんにちは。|こんばんは。|MARKET COMPASS)/);if(m&&m.index>0&&m.index<350)t=t.slice(m.index).trim();
+ return t;
+}
 function renderBrief(){
- const t=String(state.data?.brief||DEMO.brief||'').trim();const el=$('#briefText');if(!el)return;
+ const t=cleanRadioTextClient(state.data?.brief||DEMO.brief||'');const el=$('#briefText');if(!el)return;
  let paras=t.split(/\n\s*\n+/).map(x=>x.trim()).filter(Boolean);
  if(paras.length<=1){const sentences=t.match(/[^。！？!?]+[。！？!?]?/g)||[t];paras=[];for(let i=0;i<sentences.length;i+=3)paras.push(sentences.slice(i,i+3).join('').trim())}
  el.innerHTML=paras.map(p=>`<p>${esc(p)}</p>`).join('');
@@ -573,7 +592,7 @@ function stopSpeech(){
 }
 function speakBrowserBrief(){
  if(!('speechSynthesis'in window))return toast('このブラウザは読み上げに対応していません');
- stopSpeech();state.speechOwner='radio';const run=++state.speechRun;const parts=splitSpeech(state.data?.brief||DEMO.brief);const settings=speechSettings();let i=0;$('#speakBtn').textContent='Ⅱ';
+ stopSpeech();state.speechOwner='radio';const run=++state.speechRun;const parts=splitSpeech(cleanRadioTextClient(state.data?.brief||DEMO.brief));const settings=speechSettings();let i=0;$('#speakBtn').textContent='Ⅱ';
  const next=()=>{if(run!==state.speechRun)return;if(i>=parts.length){$('#speakBtn').textContent='▶';state.speechPaused=false;updateMobileDock();return}const sentence=parts[i];const idx=i++;const u=new SpeechSynthesisUtterance(sentence);u.lang='ja-JP';u.rate=settings.rate;u.pitch=settings.pitch;u.volume=settings.volume;if(settings.voice)u.voice=settings.voice;u.onend=()=>{if(run!==state.speechRun)return;setTimeout(next,pauseForSentence(sentence,idx))};u.onerror=e=>{if(e.error!=='canceled'&&e.error!=='interrupted')toast('読み上げを停止しました');$('#speakBtn').textContent='▶';updateMobileDock()};speechSynthesis.speak(u);updateMobileDock()};next();
 }
 function testVoice(){
@@ -913,3 +932,4 @@ boot();
 // v1.12.0: Google Sheetsへ学習履歴を自動蓄積し、NotebookLM専用ソースとLife Compass月次要約を追加。
 
 // v1.13.0: 手動更新をリアルタイム新規取得へ変更。定時/臨時ニュース履歴と各回ラジオ再生を追加。
+// v1.14.0: 証券会社5社をホームへ常時表示。公式YouTube学習情報を朝・昼・夜に自動収集し、ホーム/学習ページへ表示。

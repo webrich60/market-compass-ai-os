@@ -311,3 +311,15 @@ nav button:hover{transform:translateX(2px)}
 .history-chip:hover{background:#edf5ff;border-color:#8eb5e5}.history-chip.active{background:#0b5bd3;border-color:#0b5bd3;color:#fff;box-shadow:0 5px 14px rgba(11,91,211,.18)}
 .history-loading{color:var(--muted);font-size:.75rem}.news-history-panel{margin:0 0 16px}.radio-card+.transcript{margin-top:16px}
 @media(max-width:800px){.brief-history-panel{grid-template-columns:1fr;padding:17px}.brief-history-picker{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;-webkit-overflow-scrolling:touch}.history-chip{flex:0 0 auto;min-height:40px}.brief-history-panel p{font-size:.74rem}}
+
+
+/* v1.14.0: broker + YouTube learning visibility */
+.broker-quick-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0 0 28px}
+.broker-quick-grid article{background:#fff;border:1px solid #d5e1f2;border-radius:18px;padding:16px;box-shadow:0 8px 26px rgba(18,54,94,.06);display:flex;flex-direction:column;gap:7px;min-width:0}
+.broker-quick-grid article.main{border:2px solid #1769d2;background:linear-gradient(180deg,#f8fbff,#eef6ff)}
+.broker-quick-grid span{font-size:12px;font-weight:800;color:#48647f}.broker-quick-grid b{font-size:17px;color:#102238}.broker-quick-grid small{color:#5f7186;line-height:1.55;min-height:38px}
+.broker-quick-grid a{margin-top:auto;color:#0866d6;font-weight:800;text-decoration:none}.broker-quick-grid a:hover{text-decoration:underline}
+.home-learning-feed{margin-bottom:28px}.home-learning-feed .learning-feed-card{min-height:0}
+.learning-feed-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.source-links{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:1200px){.broker-quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.broker-quick-grid{grid-template-columns:1fr}.broker-quick-grid small{min-height:0}.home-broker-head,.home-learning-head{align-items:flex-start}.learning-feed-actions{width:100%}}
