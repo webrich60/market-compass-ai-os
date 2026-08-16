@@ -45,7 +45,7 @@ function readStoredArray(key){
  }
 }
 
-const state={data:null,markets:null,marketPeriod:'1m',marketSymbol:'NIKKEI',liveMarketSymbol:'NIKKEI',filter:'all',lifeFilter:'all',choices:{},backend:safeStorageGet('mc_backend')||'',syncToken:safeStorageGet('mc_sync_token')||'',syncTimer:null,syncBusy:false,lastSync:null,speechRun:0,speechPaused:false,speechOwner:null,sectionSpeechEl:null,audio:null,audioQueue:[],audioIndex:0,coachCancel:null,coachBusy:false};
+const state={data:null,latestData:null,briefHistory:[],historySelectedRow:null,newsPollTimer:null,newsRefreshBusy:false,markets:null,learningFeed:[],learningFeedFetchedAt:0,notebook:{sheetUrl:'',sheetName:'',notebookUrl:'',ready:false},marketPeriod:'1m',marketSymbol:'NIKKEI',liveMarketSymbol:'NIKKEI',filter:'all',lifeFilter:'all',choices:{},backend:safeStorageGet('mc_backend')||'',syncToken:safeStorageGet('mc_sync_token')||'',syncTimer:null,syncBusy:false,lastSync:null,speechRun:0,speechPaused:false,speechOwner:null,sectionSpeechEl:null,audio:null,audioQueue:[],audioIndex:0,coachCancel:null,coachBusy:false};
 const DEMO={
  generatedAt:new Date().toISOString(),
  pulse:[
@@ -58,7 +58,8 @@ const DEMO={
   {region:'米国',importance:5,title:'米国の物価・雇用・FRB発言を最優先で確認する日',summary:'米国の金利見通しは、ドル円・世界株・金など幅広い市場へ波及しやすい重要材料です。',why:'「FRBが利下げ/利上げを急ぐか」が変わると、日米金利差の見方も変わります。',impact:['ドル円','米国株','金利'],url:'https://www.federalreserve.gov/'},
   {region:'日本',importance:5,title:'日銀の金融政策と国内物価の組み合わせを確認',summary:'日本の政策金利や物価見通しは、円相場と日本株の評価に直結しやすい材料です。',why:'米国だけでなく日本側の金利が動くと、日米金利差そのものが変化します。',impact:['円','日経平均','銀行株'],url:'https://www.boj.or.jp/'},
   {region:'世界',importance:4,title:'地政学・エネルギー価格がインフレへ与える影響を追う',summary:'原油や輸送コストの上昇は、物価・企業利益・金利見通しへ連鎖することがあります。',why:'ニュースを単発で見ず「エネルギー→物価→金利→通貨・株」の順で考えます。',impact:['原油','金','株式'],url:'https://www.gdeltproject.org/'},
-  {region:'FX',importance:4,title:'ドル円は「日米金利差」と「リスク回避」を分けて考える',summary:'円高・円安を一つの理由だけで説明せず、複数の材料が同時にどう働くかを見る練習です。',why:'同じ日に円安材料と円高材料が同居することは普通です。',impact:['ドル円'],url:'#'}
+  {region:'FX',importance:4,title:'ドル円は「日米金利差」と「リスク回避」を分けて考える',summary:'円高・円安を一つの理由だけで説明せず、複数の材料が同時にどう働くかを見る練習です。',why:'同じ日に円安材料と円高材料が同居することは普通です。',impact:['ドル円'],url:'#'},
+  {region:'世界',importance:4,title:'中国・欧州の景気と貿易の変化を日本への波及まで見る',summary:'中国需要、欧州景気、関税や供給網の変化は、日本の輸出企業や原材料価格にも影響し得ます。',why:'海外ニュースを「外国の話」で終わらせず、日本企業・為替・物価へどう届くかを見る練習です。',impact:['日本株','為替','貿易'],url:'#'}
  ],
  lifestyle:[
   {category:'旅',title:'週末に行きたい国内の小さな旅先を探す',summary:'有名観光地だけでなく、温泉街・古い町並み・道の駅など、少し足を延ばしたくなる記事を集めます。',url:'#',source:'デモ'},
@@ -79,11 +80,11 @@ const terms=[
  ['政策金利','中央銀行が金融政策の基準として動かす金利。株・為替・債券を見る土台。'],['FOMC','米国の金融政策を決める会合。FRBの金利判断で世界市場が動きやすい。'],['FRB','米国の中央銀行制度。米国金利とドルの大きな材料。'],['日銀','日本銀行。日本の金融政策を担う中央銀行。'],['CPI','消費者物価指数。インフレの強さを見る代表的な指標。'],['雇用統計','雇用者数・失業率など。米国景気とFRBの判断材料。'],['長期金利','一般に10年国債利回りなど。株の評価や為替に影響。'],['国債','国が資金調達のため発行する債券。金利を見る中心的市場。'],['利回り','投資額に対して得られる収益率。債券価格とは逆方向に動きやすい。'],['インフレ','物価が継続的に上がる状態。金利政策に大きく影響する。'],['デフレ','物価が継続的に下がる状態。需要不足や賃金停滞と結びつくことがある。'],['GDP','国内で生み出された付加価値の合計。経済規模・成長を見る基本。'],['為替','異なる通貨を交換する比率。ドル円なら1ドル何円か。'],['円高','1ドルを買うのに必要な円が少なくなる状態。例150円→140円。'],['円安','1ドルを買うのに必要な円が多くなる状態。例140円→150円。'],['リスクオン','投資家がリスクを取りやすい心理状態。株などが買われやすい。'],['リスクオフ','投資家が安全性を重視する心理状態。資金移動を観察する。'],['PER','株価が利益の何倍まで買われているかを見る代表的な株価指標。'],['PBR','株価が純資産の何倍かを見る株価指標。'],['ROE','株主資本を使ってどれくらい利益を生んだかを見る指標。'],['EPS','1株あたり利益。企業利益と株価評価をつなぐ基本指標。'],['ボラティリティ','価格変動の大きさ。高いほど値動きが激しい。'],['損切り','想定が外れたとき損失拡大を防ぐためポジションを閉じること。'],['ポジションサイズ','一回の取引に投入する量。上手さより先にリスク管理が重要。']
 ];
 const roadmap=[
- {n:1,title:'土台づくり',period:'0〜3か月',items:['円高・円安を即答できる','金利・物価・景気の基本を理解','毎日ニュース3本＋5分ラジオ','予想理由を1行書く']},
- {n:2,title:'経済をつなげる',period:'3〜9か月',items:['FRB・日銀・CPI・雇用統計を理解','金利→為替→株の連鎖を説明','重要指標の発表前後を観察','過去予想の間違い方を分類']},
- {n:3,title:'株・FXの分析基礎',period:'9〜18か月',items:['企業利益・バリュエーション','テクニカルは補助として学習','FXの金利差・需給・リスク要因','ルール化した模擬売買']},
- {n:4,title:'検証できる実践者',period:'18〜30か月',items:['仮説→記録→検証を習慣化','勝率より期待値と損失管理','相場環境ごとに戦略を分ける','データで自分の癖を把握']},
- {n:5,title:'自分の型を持つ',period:'30か月〜',items:['得意市場と時間軸を限定','売買しない判断もルール化','四半期ごとに戦略を再検証','感情ではなく再現性を優先']}
+ {n:1,title:'土台＋デモ',period:'0〜3か月',items:['円高・円安、金利・物価・景気の基本','毎日ニュース5本＋5分ラジオ','MARKET COMPASSで予想理由を残す','FXはまずデモで注文操作を覚える']},
+ {n:2,title:'超少額の実践',period:'3〜12か月',items:['株は1株から小さく経験する','FXは1通貨など超少額から始める','指値・逆指値・決済の操作を覚える','損失上限と取引理由を毎回ノートへ']},
+ {n:3,title:'中級者の型づくり',period:'12〜24か月',items:['企業利益・バリュエーションを学ぶ','テクニカルは補助として使う','ニュース→金利→為替→株を説明する','少額売買を記録して得意市場を絞る']},
+ {n:4,title:'検証できる実践者',period:'24〜36か月',items:['仮説→記録→検証を習慣化','勝率より期待値と損失管理','相場環境ごとに戦略を分ける','高機能ツールは必要な機能だけ使う']},
+ {n:5,title:'自分の型を持つ',period:'36か月〜',items:['得意市場と時間軸を限定','売買しない判断もルール化','四半期ごとに戦略を再検証','感情ではなく再現性を優先']}
 ];
 const cause=['インフレ上振れ','利下げ期待が後退','金利上昇圧力','ドル買い要因','ドル円の円安要因'];
 let firebaseAuth=null;
@@ -140,7 +141,7 @@ async function resetFirebasePassword(){
  try{await sendPasswordResetEmail(firebaseAuth,email);setLoginStatus('パスワード再設定メールを送信しました。','ok')}catch(err){console.warn('firebase reset',err);setLoginStatus(friendlyFirebaseError(err),'error')}
 }
 async function logoutFirebase(){
- try{stopSpeech?.();if(firebaseAuth)await signOut(firebaseAuth)}catch(e){console.warn('logout',e)}
+ try{stopSpeech?.();stopNewsAutoPoll();stopCloudSync();if(firebaseAuth)await signOut(firebaseAuth)}catch(e){console.warn('logout',e)}
  appInitialized=false;showLoginGate();setLoginStatus('ログアウトしました。');
 }
 function bindLoginGate(){
@@ -169,7 +170,7 @@ function init(){
  $('#todayLabel').textContent=new Intl.DateTimeFormat('ja-JP',{dateStyle:'full'}).format(new Date());
  bindNav();bindActions();initSpeechControls();renderRoadmap();renderTerms();loadLocalStats();loadJournal();loadPredictions();renderData(DEMO);state.markets=DEMO_MARKETS;renderMarkets();if(!state.backend||!state.syncToken){setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline')}else{setApiStatus('busy');setLastUpdated(null,'busy');setRefreshButton('busy')};
  updateMobileDock();
- if(state.backend){fetchBackend();if(state.syncToken){cloudSync(true);startCloudSync()}}
+ if(state.backend){fetchBackend();if(state.syncToken){cloudSync(true);startCloudSync();startNewsAutoPoll()}}
  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 function applyDesktopScale(){
@@ -197,8 +198,9 @@ function showPage(page){
  $$('[data-mobile-page]').forEach(b=>{const active=b.dataset.mobilePage===page;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
  $('#pageTitle').textContent=$(`#nav button[data-page="${page}"]`)?.textContent.replace(/^..\s?/,'')||'MARKET COMPASS';
  if(page==='news')$('#dockNewsBtn')?.classList.remove('has-dot');
+ if((page==='news'||page==='brief')&&state.backend&&state.syncToken&&!state.briefHistory.length)fetchBriefHistory(false);
  updateMobileDock();
- toggleSidebar(false);if(page==='market'){renderMarkets();renderTradingViewLive(state.liveMarketSymbol||state.marketSymbol)}window.scrollTo({top:0,behavior:'smooth'});
+ toggleSidebar(false);if(page==='market'){renderMarkets();renderTradingViewLive(state.liveMarketSymbol||state.marketSymbol)}if(page==='learn'&&state.backend&&state.syncToken&&(!state.learningFeed.length||Date.now()-state.learningFeedFetchedAt>30*60*1000))fetchLearningFeed(false);if(page==='notebook')fetchNotebookStatus(true);window.scrollTo({top:0,behavior:'smooth'});
 }
 
 
@@ -234,11 +236,25 @@ function bindActions(){
  $('#saveBackendBtn').onclick=()=>saveConnection();
  $('#syncNowBtn')?.addEventListener('click',()=>cloudSync(false));
  $('#phoneLinkBtn')?.addEventListener('click',buildPhoneSetupLink);
- $('#clearBackendBtn').onclick=()=>{safeStorageRemove('mc_backend');safeStorageRemove('mc_sync_token');state.backend='';state.syncToken='';$('#backendUrl').value='';$('#syncToken').value='';stopCloudSync();setSyncStatus('demo','未接続','クラウド同期を停止しました。');setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline');$('#connectionMessage').textContent='接続を解除しました。';renderData(DEMO);state.markets=DEMO_MARKETS;renderMarkets()};
+ $('#clearBackendBtn').onclick=()=>{safeStorageRemove('mc_backend');safeStorageRemove('mc_sync_token');state.backend='';state.syncToken='';stopNewsAutoPoll();state.briefHistory=[];state.historySelectedRow=null;state.latestData=null;$('#backendUrl').value='';$('#syncToken').value='';stopCloudSync();setSyncStatus('demo','未接続','クラウド同期を停止しました。');setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline');$('#connectionMessage').textContent='接続を解除しました。';renderData(DEMO);state.markets=DEMO_MARKETS;renderMarkets()};
  $('#logoutBtn')?.addEventListener('click',logoutFirebase);
  $('#backendUrl').value=state.backend;$('#syncToken').value=state.syncToken;setSyncStatus(state.backend&&state.syncToken?'busy':'demo',state.backend&&state.syncToken?'接続準備済み':'デモモード',state.backend&&state.syncToken?'同期を確認します。':'まだクラウド同期していません。');
  if(state.backend&&state.syncToken){setApiStatus('busy');setLastUpdated(null,'busy');setRefreshButton('busy')}else{setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline')}
  $$('#newsFilters button').forEach(b=>b.onclick=()=>{$$('#newsFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.filter=b.dataset.filter;renderNews()});
+ ['#topNews','#newsList'].forEach(sel=>$(sel)?.addEventListener('click',e=>{const b=e.target.closest('.news-ai-btn');if(b)askNewsExplain(Number(b.dataset.newsIndex||0),b)}));
+ ['#newsHistoryPicker','#radioHistoryPicker'].forEach(sel=>$(sel)?.addEventListener('click',e=>{const latest=e.target.closest('[data-history-latest]');if(latest){restoreLatestBrief();return}const b=e.target.closest('[data-history-row]');if(b)loadBriefHistoryRow(Number(b.dataset.historyRow||0))}));
+ $('#learningFeedRefreshBtn')?.addEventListener('click',()=>fetchLearningFeed(true));
+ $('#learningFeedList')?.addEventListener('click',e=>{const b=e.target.closest('[data-learning-pick]');if(!b)return;const item=state.learningFeed[Number(b.dataset.learningPick||0)];if(!item)return;if($('#learningUrl'))$('#learningUrl').value=item.url||'';if($('#learningNote'))$('#learningNote').value=`${item.source||''} / ${item.title||''}`;$('#learningUrl')?.scrollIntoView({behavior:'smooth',block:'center'});toast('URLをAI分析欄へ送りました')});
+ $('#analyzeLearningBtn')?.addEventListener('click',analyzeLearningResource);
+ $('#clearLearningBtn')?.addEventListener('click',()=>{if($('#learningUrl'))$('#learningUrl').value='';if($('#learningNote'))$('#learningNote').value='';if($('#learningAnalysisResult'))$('#learningAnalysisResult').innerHTML='<div class="ai-coach-placeholder"><b>使い方</b><span>URLを貼ってAI分析を押してください。</span></div>'});
+ $('#buildChatgptPromptBtn')?.addEventListener('click',()=>{const t=buildChatgptDecisionPrompt();if($('#chatgptPromptPreview'))$('#chatgptPromptPreview').value=t;toast('ChatGPT相談文を作りました')});
+ $('#openChatgptBtn')?.addEventListener('click',openChatgptWithPrompt);
+ $('#setupNotebookBtn')?.addEventListener('click',setupNotebookBridge);
+ $('#saveNotebookTodayBtn')?.addEventListener('click',saveNotebookToday);
+ $('#openNotebookSheetBtn')?.addEventListener('click',openNotebookSheet);
+ $('#saveNotebookLmUrlBtn')?.addEventListener('click',saveNotebookLmUrl);
+ $('#openNotebookLmBtn')?.addEventListener('click',openNotebookLm);
+ $('#buildLifeCompassSummaryBtn')?.addEventListener('click',buildLifeCompassSummary);
  $$('#lifestyleFilters button').forEach(b=>b.onclick=()=>{$$('#lifestyleFilters button').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.lifeFilter=b.dataset.lifeFilter;renderLifestyle()});
 
  $$('.market-periods button').forEach(b=>b.onclick=()=>{state.marketPeriod=b.dataset.marketPeriod;syncMarketControls();renderMarkets()});
@@ -415,10 +431,70 @@ function fetchMarkets(fromRefresh=false){
  },25000);
 }
 
-function renderData(data){state.data=data||DEMO;renderPulse();renderNews();renderLifestyle();renderBrief();renderCause();}
+function renderData(data){state.data=data||DEMO;renderPulse();renderNews();renderLifestyle();renderBrief();renderCause();renderBriefHistory();}
 function renderPulse(){const d=state.data||DEMO;$('#pulseGrid').innerHTML=d.pulse.map(x=>`<article class="pulse"><div class="eyebrow">${esc(x.name)}</div><div class="value tone-${x.tone||'neutral'}">${esc(x.value)}</div><small>${esc(x.note||'')}</small></article>`).join('')}
-function newsCard(n,i){const official=n.official?'<span class="official-badge">公式一次情報</span>':'';return `<article class="news-card"><span class="rank">${i+1}</span><div class="news-meta"><b>${esc(n.region||'世界')}</b><span>重要度 ${'★'.repeat(Math.min(5,n.importance||3))}</span>${official}</div><h3>${esc(n.title)}</h3><p>${esc(n.summary||'')}</p><div class="impact">${(n.impact||[]).map(x=>`<span>${esc(x)}</span>`).join('')}</div></article>`}
-function renderNews(){const d=state.data||DEMO;const all=d.news||[];$('#topNews').innerHTML=all.slice(0,3).map(newsCard).join('');const f=state.filter;const rows=all.filter(n=>f==='all'||n.region===f||(n.impact||[]).includes(f));$('#newsList').innerHTML=rows.map(n=>`<article class="news-row"><div class="importance level-${Math.max(1,Math.min(5,n.importance||3))}"><strong>重要度</strong><span class="importance-stars">${'★'.repeat(Math.max(1,Math.min(5,n.importance||3)))}${'☆'.repeat(5-Math.max(1,Math.min(5,n.importance||3)))}</span><em>${importanceLabel(n.importance||3)}</em></div><div><div class="news-meta"><b>${esc(n.region||'世界')}</b><span>${esc(n.source||'')}</span>${n.official?'<span class="official-badge">公式一次情報</span>':''}</div><h3>${esc(n.title)}</h3><p>${esc(n.summary||'')}</p><p><b>なぜ重要？</b> ${esc(n.why||'市場への影響を自分で考えてみましょう。')}</p><div class="impact">${(n.impact||[]).map(x=>`<span>${esc(x)}</span>`).join('')}</div></div><div>${n.url&&n.url!=='#'?`<a href="${safeUrl(n.url)}" target="_blank" rel="noopener">原文 ↗</a>`:''}</div></article>`).join('')||'<article class="panel">該当ニュースはありません。</article>'}
+function newsCard(n,i){const official=n.official?'<span class="official-badge">公式一次情報</span>':'';return `<article class="news-card"><span class="rank">${i+1}</span><div class="news-meta"><b>${esc(n.region||'世界')}</b><span>重要度 ${'★'.repeat(Math.min(5,n.importance||3))}</span>${official}</div><h3>${esc(n.title)}</h3><p>${esc(n.summary||'')}</p><div class="impact">${(n.impact||[]).map(x=>`<span>${esc(x)}</span>`).join('')}</div><div class="news-ai-actions"><button class="ghost news-ai-btn" data-news-index="${i}">✨ AIでもっと分かりやすく</button></div><div class="news-ai-answer" data-news-answer-index="${i}" hidden></div></article>`}
+function renderNews(){const d=state.data||DEMO;const all=d.news||[];$('#topNews').innerHTML=all.slice(0,5).map((n,i)=>newsCard(n,i)).join('');const f=state.filter;const rows=all.map((n,idx)=>({n,idx})).filter(x=>f==='all'||x.n.region===f||(x.n.impact||[]).includes(f));$('#newsList').innerHTML=rows.map(({n,idx})=>`<article class="news-row"><div class="importance level-${Math.max(1,Math.min(5,n.importance||3))}"><strong>重要度</strong><span class="importance-stars">${'★'.repeat(Math.max(1,Math.min(5,n.importance||3)))}${'☆'.repeat(5-Math.max(1,Math.min(5,n.importance||3)))}</span><em>${importanceLabel(n.importance||3)}</em></div><div><div class="news-meta"><b>${esc(n.region||'世界')}</b><span>${esc(n.source||'')}</span>${n.official?'<span class="official-badge">公式一次情報</span>':''}</div><h3>${esc(n.title)}</h3><p>${esc(n.summary||'')}</p><p><b>なぜ重要？</b> ${esc(n.why||'市場への影響を自分で考えてみましょう。')}</p><div class="impact">${(n.impact||[]).map(x=>`<span>${esc(x)}</span>`).join('')}</div><div class="news-ai-actions"><button class="ghost news-ai-btn" data-news-index="${idx}">✨ このニュースをAI先生に聞く</button></div><div class="news-ai-answer" data-news-answer-index="${idx}" hidden></div></div><div>${n.url&&n.url!=='#'?`<a href="${safeUrl(n.url)}" target="_blank" rel="noopener">原文 ↗</a>`:''}</div></article>`).join('')||'<article class="panel">該当ニュースはありません。</article>'}
+
+function setNewsExplainBusy(idx,busy){
+ $$(`.news-ai-btn[data-news-index="${idx}"]`).forEach(b=>{b.disabled=busy;b.textContent=busy?'AI先生が整理中…':(b.closest('.news-card')?'✨ AIでもっと分かりやすく':'✨ このニュースをAI先生に聞く')});
+}
+function newsExplainFallback(n){return {ok:true,mode:'RULE',title:'このニュースを3段階で理解',simple:n?.summary||'まず「何が起きたか」を確認します。',background:n?.why||'次に、金利・物価・景気・企業利益のどこにつながるかを考えます。',chain:['ニュースの事実を確認','景気・物価・金利への波及を見る',(n?.impact||[]).length?'影響候補：'+n.impact.join('・'):'市場が実際にどう反応したか確認'],terms:[],checkNext:'原文と市場チャートを見て、予想と実際の反応が一致したか確認してください。',caution:'1本のニュースだけで売買方向を断定しません。'} }
+function renderNewsExplain(idx,d){
+ const chain=(d.chain||[]).map(x=>`<li>${esc(x)}</li>`).join('');
+ const terms=(d.terms||[]).map(x=>typeof x==='string'?`<li>${esc(x)}</li>`:`<li><b>${esc(x.term||'')}</b> ${esc(x.meaning||'')}</li>`).join('');
+ const html=`<div class="ai-answer-title">${esc(d.title||'AI先生の解説')}</div><div class="ai-answer-summary"><b>一言でいうと：</b> ${esc(d.simple||'')}</div><div class="ai-answer-box"><b>背景</b><span>${esc(d.background||'')}</span></div>${chain?`<div class="ai-answer-box"><b>どうつながる？</b><ol>${chain}</ol></div>`:''}${terms?`<div class="ai-answer-box"><b>今日覚える用語</b><ul>${terms}</ul></div>`:''}<div class="ai-answer-box"><b>次に確認</b><span>${esc(d.checkNext||'')}</span></div><div class="ai-answer-box caution"><b>注意</b><span>${esc(d.caution||'売買を断定せず、反対材料も確認します。')}</span></div><small class="ai-mode-note">${d.mode==='AI'?'Geminiによる追加解説':'基本解説'}</small>`;
+ $$(`[data-news-answer-index="${idx}"]`).forEach(el=>{el.hidden=false;el.innerHTML=html;enhanceReadableText(el)});
+}
+function askNewsExplain(idx){
+ const n=(state.data?.news||DEMO.news||[])[idx];if(!n)return;
+ renderNewsExplain(idx,newsExplainFallback(n));
+ if(!state.backend||!state.syncToken){toast('基本解説を表示しました。GAS接続後はGeminiで詳しく説明します');return}
+ setNewsExplainBusy(idx,true);
+ const url=gasUrl('newsExplain',{index:idx,row:state.historySelectedRow||''});
+ gasRequest(url,d=>{setNewsExplainBusy(idx,false);if(!d||d.ok===false)throw new Error(d?.error||'AI解説失敗');renderNewsExplain(idx,d)},err=>{console.warn('news explain',err);setNewsExplainBusy(idx,false);toast('Gemini追加解説は取得できませんでした。基本解説を表示しています')},22000);
+}
+
+function renderLearningFeed(){
+ const el=$('#learningFeedList');if(!el)return;const rows=state.learningFeed||[];
+ el.innerHTML=rows.length?rows.map((x,i)=>`<article class="learning-feed-card"><div class="learning-feed-meta"><span class="source-kind">${esc(x.source||'公式')}</span><span>${esc(x.publishedLabel||x.published||'')}</span></div><h3>${esc(x.title||'')}</h3><div class="hero-actions"><a class="ghost" href="${safeUrl(x.url)}" target="_blank" rel="noopener noreferrer">動画を見る ↗</a><button class="primary small" data-learning-pick="${i}">AI分析へ送る</button></div></article>`).join(''):'<article class="panel">新しい公式動画を取得できませんでした。上の公式チャンネルリンクから直接確認できます。</article>';
+}
+function fetchLearningFeed(force=false){
+ const el=$('#learningFeedList'),b=$('#learningFeedRefreshBtn');if(!state.backend||!state.syncToken){if(el)el.innerHTML='<article class="panel">GAS接続後に最新動画を取得できます。</article>';return}
+ if(!force&&state.learningFeed.length&&Date.now()-state.learningFeedFetchedAt<30*60*1000){renderLearningFeed();return}
+ if(b){b.disabled=true;b.textContent='取得中…'};if(el)el.innerHTML='<article class="panel">日本銀行・財務省・金融庁・J-FLECから最新動画を確認しています…</article>';
+ gasRequest(gasUrl('learningFeed',{}),d=>{if(b){b.disabled=false;b.textContent='↻ 学習動画を更新'};if(!d||d.ok===false)throw new Error(d?.error||'取得失敗');state.learningFeed=d.items||[];state.learningFeedFetchedAt=Date.now();renderLearningFeed();if(force)toast('公式学習動画を更新しました')},err=>{console.warn('learning feed',err);if(b){b.disabled=false;b.textContent='↻ 学習動画を更新'};if(el)el.innerHTML='<article class="panel">公式動画の取得に失敗しました。固定の公式リンクはそのまま利用できます。</article>';if(force)toast('学習動画を取得できませんでした')},22000);
+}
+function renderLearningAnalysis(d){
+ const el=$('#learningAnalysisResult');if(!el)return;
+ const kp=(d.keyPoints||[]).map(x=>`<li>${esc(x)}</li>`).join('');
+ const terms=(d.terms||[]).map(x=>typeof x==='string'?`<li>${esc(x)}</li>`:`<li><b>${esc(x.term||'')}</b> ${esc(x.meaning||'')}</li>`).join('');
+ const con=(d.connections||[]).map(x=>`<li>${esc(x)}</li>`).join('');
+ const qs=(d.nextQuestions||[]).map(x=>`<li>${esc(x)}</li>`).join('');
+ el.innerHTML=`<div class="ai-answer-title">${esc(d.title||'学習情報のAI分析')}</div><div class="ai-answer-summary">${esc(d.summary||'')}</div><div class="learning-result-grid"><div class="ai-answer-box"><b>要点</b><ul>${kp}</ul></div><div class="ai-answer-box"><b>今日のニュース・相場との接続</b><ul>${con}</ul></div><div class="ai-answer-box"><b>用語</b><ul>${terms}</ul></div><div class="ai-answer-box"><b>次に考える質問</b><ul>${qs}</ul></div></div><div class="ai-answer-box"><b>情報の見方</b><span>${esc(d.reliability||'一次情報か、意見・解説かを区別して確認します。')}</span></div>${d.limitation?`<div class="ai-answer-box caution"><b>分析上の制限</b><span>${esc(d.limitation)}</span></div>`:''}`;
+ enhanceReadableText(el);
+}
+function analyzeLearningResource(){
+ const raw=$('#learningUrl')?.value.trim()||'',note=($('#learningNote')?.value||'').trim().slice(0,1200);if(!raw)return toast('動画または記事のURLを入力してください');
+ try{new URL(raw)}catch{return toast('URLの形式を確認してください')}
+ if(!state.backend||!state.syncToken){toast('この機能はGAS接続後に使えます');showPage('settings');return}
+ const b=$('#analyzeLearningBtn');if(b){b.disabled=true;b.textContent='AI分析中…'};const el=$('#learningAnalysisResult');if(el)el.innerHTML='<div class="ai-coach-placeholder"><b>分析中</b><span>要点・用語・ニュースとの関係を整理しています…</span></div>';
+ const url=gasUrl('learningAnalyze',{url:raw,note});
+ gasRequest(url,d=>{if(b){b.disabled=false;b.textContent='✨ AIで分析する'};if(!d||d.ok===false)throw new Error(d?.error||'分析失敗');renderLearningAnalysis(d);toast('学習情報をAIで整理しました')},err=>{console.warn('learning analyze',err);if(b){b.disabled=false;b.textContent='✨ AIで分析する'};if(el)el.innerHTML='<div class="ai-coach-placeholder"><b>分析できませんでした</b><span>記事側のアクセス制限やURL形式の可能性があります。YouTubeは字幕・要点を補足メモへ貼って再試行してください。</span></div>';toast('AI分析に失敗しました')},30000);
+}
+function latestMarketSnapshot(){
+ return ['NIKKEI','USDJPY'].map(symbol=>{const s=marketSeries(symbol),pts=periodPoints(s,state.marketPeriod||'1m'),last=pts.at(-1),chg=marketChange(pts,symbol);return `${s?.name||symbol}: ${last?marketFormat(symbol,Number(last.value)):'--'} / ${chg.text}`}).join('\n');
+}
+function buildChatgptDecisionPrompt(){
+ const news=(state.data?.news||DEMO.news||[]).slice(0,5);const usdChoice=state.choices.USDJPY||'未選択',nikChoice=state.choices.NIKKEI||'未選択';const usdReason=$('#reasonUSDJPY')?.value.trim()||'未記入',nikReason=$('#reasonNIKKEI')?.value.trim()||'未記入';
+ return `あなたは私の投資学習の最終レビュアーです。売買を断定せず、私の思い込みを検証してください。\n\n【今日の重要ニュースTOP5】\n${news.map((n,i)=>`${i+1}. ${n.title}\n   概要: ${n.summary||''}\n   重要な理由: ${n.why||''}`).join('\n')}\n\n【市場の参考値】\n${latestMarketSnapshot()}\n\n【私の予想】\nドル円: ${usdChoice}\n理由: ${usdReason}\n日経平均: ${nikChoice}\n理由: ${nikReason}\n\n【お願い】\n1. 私の予想を支持する材料と反対する材料を分けてください。\n2. ニュース間の因果関係を、金利→為替→企業利益→株価のようにつないでください。\n3. 私が見落としている可能性が高い材料を3つ挙げてください。\n4. 「上がる/下がる」と断定せず、強気・中立・弱気の3シナリオで考えてください。\n5. 明日答え合わせするときに確認すべき数字・ニュースを挙げてください。\n6. 私の判断プロセスを100点満点ではなく、良い点・改善点として評価してください。\n\nこれは学習目的です。具体的な売買注文や投資額の指示ではなく、判断の質を高めるためのレビューをしてください。`;
+}
+function openChatgptWithPrompt(){
+ const t=$('#chatgptPromptPreview')?.value.trim()||buildChatgptDecisionPrompt();if($('#chatgptPromptPreview'))$('#chatgptPromptPreview').value=t;
+ // ポップアップブロックを避けるため、クリック操作の中で先にChatGPTを開く。
+ window.open('https://chatgpt.com/','_blank','noopener');
+ if(navigator.clipboard?.writeText){navigator.clipboard.writeText(t).then(()=>toast('相談文をコピーしました。ChatGPTに貼り付けてください')).catch(()=>toast('ChatGPTを開きました。相談文は画面からコピーしてください'))}else toast('ChatGPTを開きました。相談文をコピーしてください');
+}
 function lifeCategoryLabel(x){
  const t=String(x||'暮らし');
  if(/温泉|旅館|ホテル|宿/.test(t))return '温泉';
@@ -438,7 +514,7 @@ function renderBrief(){
  let paras=t.split(/\n\s*\n+/).map(x=>x.trim()).filter(Boolean);
  if(paras.length<=1){const sentences=t.match(/[^。！？!?]+[。！？!?]?/g)||[t];paras=[];for(let i=0;i<sentences.length;i+=3)paras.push(sentences.slice(i,i+3).join('').trim())}
  el.innerHTML=paras.map(p=>`<p>${esc(p)}</p>`).join('');
- const meta=$('#radioMeta');if(meta){const ai=String(state.data?.radioMode||'').toUpperCase()==='AI';const when=state.data?.radioGeneratedAt?`・${formatClock(state.data.radioGeneratedAt)}作成`:'';meta.textContent=(ai?'✨ Gemini 2.5 Flashが重要ニュースを編集':'保存済み原稿を表示')+when;}
+ const meta=$('#radioMeta');if(meta){const ai=String(state.data?.radioMode||'').toUpperCase()==='AI';const when=state.data?.radioGeneratedAt?`・${formatClock(state.data.radioGeneratedAt)}作成`:'';const hist=state.historySelectedRow?(state.data?.historyLabel||'過去の更新')+'・':'';meta.textContent=hist+(ai?'✨ Gemini 2.5 Flashが重要ニュースを編集':'保存済み原稿を表示')+when;}
 }
 
 function initSpeechControls(){
@@ -542,7 +618,7 @@ function addReadAloudControls(el){
  box.append(play,stop);el.insertBefore(box,el.firstChild);
 }
 function enhanceReadableText(root=document){
- const selectors=['#aiCoachAnswer','#topNews .news-card','#newsList .news-row','#page-lifestyle .lifestyle-card','#page-lifestyle .lifestyle-note','#page-market .market-guide','#page-market .two-col .panel','#page-drivers .panel','#roadmap .road-stage','#termGrid .term','#page-home .panel'];
+ const selectors=['#aiCoachAnswer','#topNews .news-card','#newsList .news-row','#page-lifestyle .lifestyle-card','#page-lifestyle .lifestyle-note','#page-market .market-guide','#page-market .two-col .panel','#page-drivers .panel','#page-trade .broker-card','#page-trade .trade-guide','#page-learn .learning-source-card','#learningAnalysisResult','#roadmap .road-stage','#termGrid .term','#page-home .panel'];
  selectors.forEach(sel=>root.querySelectorAll?.(sel).forEach(addReadAloudControls));
  if(root.matches?.(selectors.join(',')))addReadAloudControls(root);
 }
@@ -594,7 +670,7 @@ function saveConnection(){
  if(!/^https:\/\/script\.google\.com\//.test(u))return toast('GAS WebアプリURLを確認してください');
  if(token.length<6)return toast('同期コードを入力してください');
  safeStorageSet('mc_backend',u);safeStorageSet('mc_sync_token',token);state.backend=u;state.syncToken=token;
- setSyncStatus('busy','接続確認中','ニュースと学習データを確認しています。');fetchBackend(true);cloudSync(false);startCloudSync();
+ setSyncStatus('busy','接続確認中','ニュースと学習データを確認しています。');fetchBackend(true);cloudSync(false);startCloudSync();startNewsAutoPoll();
 }
 function buildPhoneSetupLink(){
  const out=$('#phoneLinkOutput');if(!out)return;
@@ -640,9 +716,58 @@ function startCloudSync(){
  state.syncTimer=setInterval(()=>{if(document.visibilityState==='visible')cloudSync(true)},30000);
  document.addEventListener('visibilitychange',cloudVisibilitySync);
 }
-function cloudVisibilitySync(){if(document.visibilityState==='visible'&&state.backend&&state.syncToken)cloudSync(true)}
+function cloudVisibilitySync(){if(document.visibilityState==='visible'&&state.backend&&state.syncToken){cloudSync(true);if(!state.historySelectedRow&&!state.newsRefreshBusy)fetchBackend(false,false)}}
 function stopCloudSync(){if(state.syncTimer){clearInterval(state.syncTimer);state.syncTimer=null}document.removeEventListener('visibilitychange',cloudVisibilitySync)}
+function startNewsAutoPoll(){
+ stopNewsAutoPoll();if(!state.backend||!state.syncToken)return;
+ // GAS側の定時取得後、開きっぱなしの画面も数分以内に保存済み最新版へ追従する。外部ニュースAPIは再実行しない。
+ state.newsPollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!state.historySelectedRow&&!state.newsRefreshBusy)fetchBackend(false,false)},5*60*1000);
+}
+function stopNewsAutoPoll(){if(state.newsPollTimer){clearInterval(state.newsPollTimer);state.newsPollTimer=null}}
 
+
+function setNotebookStatus(mode,title,detail){
+ const led=$('#notebookSheetLed'),t=$('#notebookSheetStatus'),d=$('#notebookSheetDetail');
+ if(led)led.className='sync-led'+(mode==='live'?' live':mode==='busy'?' busy':mode==='error'?' error':'');
+ if(t)t.textContent=title||'';if(d)d.textContent=detail||'';
+}
+function applyNotebookStatus(data){
+ if(!data)return;state.notebook={...state.notebook,...data,ready:!!data.ready};
+ if($('#notebookLmUrl')&&data.notebookUrl!==undefined)$('#notebookLmUrl').value=data.notebookUrl||'';
+ const count=Array.isArray(data.sheets)?data.sheets.length:0;
+ setNotebookStatus(data.ready?'live':'demo',data.ready?'連携用シート準備済み':'準備前',data.ready?`${data.sheetName||'Market Compass専用シート'} / ${count}タブ`:'「連携用シートを準備」を押してください。');
+}
+function fetchNotebookStatus(silent=false){
+ if(!state.backend||!state.syncToken){setNotebookStatus('demo','GAS未接続','初期設定・同期でGASを接続してください。');return}
+ setNotebookStatus('busy','確認中','Googleスプレッドシートを確認しています。');
+ gasRequest(cloudBase('notebookStatus'),data=>{if(!data||data.ok===false)throw new Error(data?.error||'NotebookLM連携状態の取得失敗');applyNotebookStatus(data);if(!silent)toast('NotebookLM連携状態を確認しました')},err=>{console.warn('notebook status',err);setNotebookStatus('error','確認できません','GASを再デプロイ後、もう一度お試しください。');if(!silent)toast('NotebookLM連携状態を確認できませんでした')},20000);
+}
+function setupNotebookBridge(){
+ if(!state.backend||!state.syncToken){toast('先にGASを接続してください');showPage('settings');return}
+ const b=$('#setupNotebookBtn');if(b){b.disabled=true;b.textContent='準備中…'};setNotebookStatus('busy','準備中','NotebookLM用タブを作成しています。');
+ gasRequest(cloudBase('setupNotebook'),data=>{if(b){b.disabled=false;b.textContent='連携用シートを準備'};if(!data||data.ok===false)throw new Error(data?.error||'準備失敗');applyNotebookStatus(data);toast('NotebookLM連携用シートを準備しました')},err=>{if(b){b.disabled=false;b.textContent='連携用シートを準備'};console.warn('notebook setup',err);setNotebookStatus('error','準備できません','GASコード更新・再デプロイを確認してください。');toast('連携用シートを準備できませんでした')},26000);
+}
+function saveNotebookToday(){
+ if(!state.backend||!state.syncToken){toast('先にGASを接続してください');return}
+ const b=$('#saveNotebookTodayBtn');if(b){b.disabled=true;b.textContent='保存中…'};
+ gasRequest(cloudBase('saveNotebookToday'),data=>{if(b){b.disabled=false;b.textContent='今日のTOP5を保存'};if(!data||data.ok===false)throw new Error(data?.error||'保存失敗');applyNotebookStatus(data);toast('今日のTOP5をNotebookLM用シートへ保存しました')},err=>{if(b){b.disabled=false;b.textContent='今日のTOP5を保存'};console.warn('notebook save today',err);toast('保存できませんでした')},26000);
+}
+function openNotebookSheet(){
+ const u=state.notebook?.sheetUrl||'';if(!u){toast('先に連携用シートを準備してください');fetchNotebookStatus(true);return}window.open(u,'_blank','noopener');
+}
+function saveNotebookLmUrl(){
+ if(!state.backend||!state.syncToken){toast('先にGASを接続してください');return}
+ const raw=$('#notebookLmUrl')?.value.trim()||'';if(raw&&!/^https:\/\/notebooklm\.google\.com\//i.test(raw))return toast('NotebookLMのURLを確認してください');
+ gasRequest(cloudBase('saveNotebookUrl',{url:raw}),data=>{if(!data||data.ok===false)throw new Error(data?.error||'保存失敗');applyNotebookStatus(data);toast(raw?'NotebookLM URLを保存しました':'NotebookLM URLを解除しました')},err=>{console.warn('notebook url save',err);toast('NotebookLM URLを保存できませんでした')},18000);
+}
+function openNotebookLm(){
+ const u=($('#notebookLmUrl')?.value.trim()||state.notebook?.notebookUrl||'https://notebooklm.google.com/');window.open(u,'_blank','noopener');
+}
+function buildLifeCompassSummary(){
+ if(!state.backend||!state.syncToken){toast('先にGASを接続してください');return}
+ const b=$('#buildLifeCompassSummaryBtn'),el=$('#lifeCompassSummaryResult');if(b){b.disabled=true;b.textContent='要約作成中…'};if(el)el.textContent='今月の学習・予想・判断ノートを集計しています…';
+ gasRequest(cloudBase('lifeCompassSummary'),data=>{if(b){b.disabled=false;b.textContent='今月の要約を作成'};if(!data||data.ok===false)throw new Error(data?.error||'要約失敗');if(el)el.textContent=data.summary||'要約を保存しました。';toast('Life Compass用月次要約を保存しました')},err=>{if(b){b.disabled=false;b.textContent='今月の要約を作成'};if(el)el.textContent='月次要約を作成できませんでした。';console.warn('life summary',err);toast('月次要約を作成できませんでした')},30000);
+}
 
 function setApiStatus(mode){
  const el=$('#apiStatus');if(!el)return;
@@ -655,10 +780,10 @@ function setApiStatus(mode){
 function setRefreshButton(mode){
  const b=$('#refreshBtn');if(!b)return;
  b.classList.remove('connect-needed');
- if(mode==='busy'){b.disabled=true;b.textContent='⟳ 更新中…';return}
+ if(mode==='busy'){b.disabled=true;b.textContent='⟳ 最新ニュース取得中…';return}
  b.disabled=false;
  if(mode==='offline'){b.textContent='⚙ 接続設定';b.classList.add('connect-needed');return}
- b.textContent='↻ 更新';
+ b.textContent='↻ 最新ニュース取得';
 }
 function importanceLabel(v){v=Number(v)||3;return v>=5?'最重要':v===4?'重要':v===3?'注目':v===2?'参考':'低'}
 function formatClock(value){const d=value?new Date(value):new Date();if(Number.isNaN(d.getTime()))return '--:--';return new Intl.DateTimeFormat('ja-JP',{hour:'2-digit',minute:'2-digit',hour12:false}).format(d)}
@@ -673,33 +798,58 @@ function setLastUpdated(value,status='ok'){
 }
 function refreshAll(){
  if(!state.backend||!state.syncToken){setApiStatus('offline');setLastUpdated(null,'offline');setRefreshButton('offline');toast('最初に接続設定をしてください');showPage('settings');return}
- // v1.7.4: ニュースと市場を独立更新。ニュース取得が失敗しても市場をデモへ戻さない。
- setApiStatus('busy');setRefreshButton('busy');setLastUpdated(null,'busy');
+ // v1.13.0: 手動更新は「保存済み再読込」ではなく、その時点のニュースを外部ソースから新規取得する。
+ state.newsRefreshBusy=true;setApiStatus('busy');setRefreshButton('busy');setLastUpdated(null,'busy');
  fetchBackend(false,true);
  fetchMarkets(true);
 }
 
 function fetchBackend(test=false,fromRefresh=false){
  if(!state.backend)return;
- $('#connectionMessage').textContent='接続を確認しています…';
- // 外部ニュースの再収集はGASの朝トリガーで行う。画面の更新は保存済み最新データを高速取得する。
- const url=state.backend+(state.backend.includes('?')?'&':'?')+'action=brief&token='+encodeURIComponent(state.syncToken);
- gasRequest(url,data=>{
+ $('#connectionMessage').textContent=fromRefresh?'最新ニュースを取りに行っています…':'接続を確認しています…';
+ const url=state.backend+(state.backend.includes('?')?'&':'?')+'action=brief&token='+encodeURIComponent(state.syncToken)+(fromRefresh?'&refresh=1':'');
+ const onOk=data=>{
   if(!data||data.ok===false)throw new Error(data?.error||'取得失敗');
   setApiStatus('live');$('#connectionMessage').textContent='GAS接続・同期は正常です。';
-  renderData({...DEMO,...data});$('#dockNewsBtn')?.classList.add('has-dot');
-  setLastUpdated(data.generatedAt||new Date(),'ok');setRefreshButton('live');
-  if(fromRefresh)toast('保存済みの最新ニュースを読み込みました');else if(test)toast('接続できました');
- },err=>{
-  // 同期が生きている場合、ニュースだけの失敗を「接続エラー」とは表示しない。
-  if(state.lastSync){setApiStatus('live');$('#connectionMessage').textContent='同期は正常です。ニュースだけ取得できませんでした。前回データを維持します。'}
+  state.historySelectedRow=null;state.latestData={...DEMO,...data};renderData(state.latestData);$('#dockNewsBtn')?.classList.add('has-dot');
+  setLastUpdated(data.generatedAt||new Date(),'ok');setRefreshButton('live');state.newsRefreshBusy=false;fetchBriefHistory(fromRefresh);
+  if(fromRefresh)toast('この時点の最新ニュースを新規取得しました');else if(test)toast('接続できました');
+ };
+ const onErr=err=>{
+  if(state.lastSync){setApiStatus('live');$('#connectionMessage').textContent='同期は正常です。ニュース取得だけ失敗しました。前回データを維持します。'}
   else {setApiStatus('error');$('#connectionMessage').textContent='GAS接続を確認できませんでした。'}
-  // 既に取得済みのニュースを消さない。初回だけデモを維持。
   if(!state.data)renderData(DEMO);
-  if(state.lastSync){setLastUpdated(state.lastSync,'ok')}else setLastUpdated(null,'error');setRefreshButton('live');
-  if(fromRefresh)toast('ニュースは前回データを維持しました');console.warn(err);
- });
+  if(state.lastSync){setLastUpdated(state.lastSync,'ok')}else setLastUpdated(null,'error');setRefreshButton('live');state.newsRefreshBusy=false;
+  if(fromRefresh)toast('最新ニュースを取得できませんでした。前回データを維持します');console.warn(err);
+ };
+ // 重い新規取得でJSONP→iframeの二重リクエストが走らないよう、手動更新はbridgeを1回だけ使う。
+ if(fromRefresh)bridgeRequest(url,onOk,onErr,120000);else gasRequest(url,onOk,onErr,22000);
 }
+function historyPickerHtml(){
+ const rows=state.briefHistory||[],latestActive=!state.historySelectedRow;
+ const latestTime=state.latestData?.generatedAt?formatClock(state.latestData.generatedAt):'--:--';
+ const buttons=[`<button class="history-chip ${latestActive?'active':''}" data-history-latest="1">● 最新 ${esc(latestTime)}</button>`];
+ rows.forEach(x=>buttons.push(`<button class="history-chip ${Number(state.historySelectedRow)===Number(x.row)?'active':''}" data-history-row="${Number(x.row)}">${esc(x.label||formatClock(x.generatedAt))}</button>`));
+ return buttons.join('')||'<span class="history-loading">まだ更新履歴がありません。</span>';
+}
+function renderBriefHistory(){
+ const html=historyPickerHtml();['#newsHistoryPicker','#radioHistoryPicker'].forEach(sel=>{const el=$(sel);if(el)el.innerHTML=html});
+ const rr=$('#radioRefreshBtn');if(rr){rr.disabled=!!state.historySelectedRow;rr.title=state.historySelectedRow?'履歴表示中は原稿を変更せず、その時点の原稿を再生します。':'最新ニュースの原稿をAIで作り直します。'}
+ const intro=$('#briefIntro');if(intro)intro.textContent=state.historySelectedRow?'選択した更新時点のニュースと保存済みラジオ原稿を表示しています。':'その更新時点の重要ニュースをGeminiが整理し、意味と市場へのつながりまで約5分でまとめます。';
+}
+function fetchBriefHistory(force=false){
+ if(!state.backend||!state.syncToken)return;
+ gasRequest(cloudBase('briefHistory',{limit:12}),d=>{if(!d||d.ok===false)throw new Error(d?.error||'履歴取得失敗');state.briefHistory=d.items||[];renderBriefHistory()},err=>{console.warn('brief history',err);if(force)toast('更新履歴だけ取得できませんでした')},22000);
+}
+function loadBriefHistoryRow(row){
+ if(!row||!state.backend||!state.syncToken)return;
+ stopSpeech();
+ gasRequest(cloudBase('briefHistoryItem',{row}),d=>{if(!d||d.ok===false)throw new Error(d?.error||'履歴取得失敗');const base=state.latestData||state.data||DEMO;state.historySelectedRow=row;renderData({...base,...d,pulse:base.pulse||[],cause:base.cause||[],lifestyle:base.lifestyle||[]});setLastUpdated(d.generatedAt||new Date(),'ok');toast((d.historyLabel||'過去の更新')+'を表示しています')},err=>{console.warn('history item',err);toast('この更新履歴を読み込めませんでした')},22000);
+}
+function restoreLatestBrief(){
+ stopSpeech();state.historySelectedRow=null;if(state.latestData){renderData(state.latestData);setLastUpdated(state.latestData.generatedAt||new Date(),'ok');toast('最新ニュースへ戻りました')}else fetchBackend(false,false);
+}
+
 function gasRequest(url,ok,fail,timeoutMs=20000){
  // Primary: JSONP (works well on GitHub Pages and most browsers).
  // Fallback: hidden GAS iframe + postMessage for browsers that reject the
@@ -757,3 +907,9 @@ boot();
 // v1.9.21: Firebase AuthとMARKET COMPASS端末データをIndexedDB中心へ移行。localStorage容量超過でもログイン・GAS同期を継続。
 
 // v1.9.22: 壊れた端末保存データを自動復旧。同期成功を先に確定し、外部通信キャッシュを廃止。
+
+// v1.10.0: 重要ニュースをホーム5本へ拡張し、少額実践→中級者向けの証券・FX入口を追加。
+// v1.11.0: ニュース個別AI解説、学習URL分析、5社の役割分担、ChatGPT最終レビュー導線を追加。
+// v1.12.0: Google Sheetsへ学習履歴を自動蓄積し、NotebookLM専用ソースとLife Compass月次要約を追加。
+
+// v1.13.0: 手動更新をリアルタイム新規取得へ変更。定時/臨時ニュース履歴と各回ラジオ再生を追加。

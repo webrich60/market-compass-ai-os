@@ -257,3 +257,57 @@ nav button:hover{transform:translateX(2px)}
 .login-reset-link{display:block;margin:12px auto 0;border:0;background:transparent;color:#9fc7ef;font-weight:800;font-size:.75rem;text-decoration:underline;cursor:pointer;padding:6px 8px}
 .login-reset-link:hover{color:#d8ebff}
 .account-card .ghost{margin-top:6px}
+
+/* v1.10.0: top 5 news + practical broker launchpad */
+#topNews.news-grid{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.news-policy-note{margin:.35rem 0 0;color:var(--muted);font-size:.82rem;max-width:760px}
+.trade-page-head p{max-width:880px;color:var(--muted);margin:.35rem 0 0}
+.trade-path{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:12px;align-items:stretch}
+.trade-path>div{background:#f4f7fb;border:1px solid var(--line);border-radius:14px;padding:15px;display:grid;gap:3px}
+.trade-path b{font-size:.78rem;color:var(--blue)}
+.trade-path span{font-weight:900}
+.trade-path small{color:var(--muted);font-size:.73rem}
+.trade-path>i{display:grid;place-items:center;color:#8090a5;font-style:normal;font-size:1.3rem}
+.trade-caution{margin:16px 0 0;padding:13px 15px;background:#fff8e8;border:1px solid #ead7a5;border-radius:13px;color:#624d1e;font-size:.84rem}
+.broker-updated{font-size:.72rem;color:var(--muted)}
+.broker-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.broker-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;min-width:0}
+.broker-card.featured{border:2px solid #8bb8f5}
+.broker-card.demo-card{background:linear-gradient(145deg,#fff,#eef5ff)}
+.broker-head{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:7px}
+.broker-type,.broker-stage{font-size:.68rem;font-weight:900;border-radius:999px;padding:5px 8px;background:#edf3fa;color:#45627f}
+.broker-stage{background:#e8f7f0;color:var(--green)}
+.broker-card h3{margin:4px 0 8px;font-size:1.14rem}
+.broker-card p{color:#52657c;font-size:.88rem}
+.broker-card ul{margin:0 0 16px;padding-left:1.2rem;color:#52657c;font-size:.82rem}
+.broker-card li{margin:.3rem 0}
+.broker-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+.broker-actions a{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.broker-actions .primary,.broker-actions .ghost{font-size:.78rem;padding:9px 12px}
+.broker-grid.advanced{grid-template-columns:repeat(2,minmax(0,1fr))}
+.broker-choice{margin-top:18px}
+@media(max-width:1050px){.trade-path{grid-template-columns:1fr}.trade-path>i{transform:rotate(90deg);height:20px}.broker-grid,.broker-grid.advanced{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){#topNews.news-grid,.broker-grid,.broker-grid.advanced{grid-template-columns:1fr}.broker-card{padding:18px}.broker-actions{display:grid;grid-template-columns:1fr}.broker-actions .primary,.broker-actions .ghost{width:100%}.trade-path>div{padding:13px}}
+
+/* v1.11.0: news AI / learning analyzer / broker roles / ChatGPT final review */
+.news-ai-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}.news-ai-actions .ghost{padding:8px 11px;font-size:.78rem}.news-ai-answer{margin-top:12px;padding:14px;border:1px solid #cfe0f4;border-radius:14px;background:#f7fbff}.news-ai-answer[hidden]{display:none}.news-ai-answer .ai-answer-box{margin-top:9px}.ai-answer-title{font-weight:900;color:#133b67;margin-bottom:7px}.ai-answer-summary{line-height:1.65;color:#334e6b;margin-bottom:10px}.ai-answer-box{display:grid;gap:5px;background:#fff;border:1px solid #dbe6f2;border-radius:12px;padding:12px;color:#40566e}.ai-answer-box b{color:#173552}.ai-answer-box ul,.ai-answer-box ol{margin:4px 0 0;padding-left:20px}.ai-answer-box.caution{background:#fffaf1;border-color:#f0d9ad}.ai-mode-note{display:block;margin-top:8px;color:#71849b}.learning-source-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.learning-source-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow)}.learning-source-card h3{font-size:1rem;margin:8px 0}.learning-source-card p{color:#52657c;line-height:1.65}.learning-source-card .ghost{display:inline-block;text-decoration:none;margin-top:5px}.source-kind{display:inline-block;padding:5px 8px;border-radius:999px;background:#edf4ff;color:#245d9e;font-size:.7rem;font-weight:900}.learning-analyzer{margin-top:18px}.learning-analyzer label{display:block;font-weight:800;margin-top:14px}.learning-analyzer label input,.learning-analyzer label textarea{margin-top:6px;font-weight:400}.learning-analysis-result{margin-top:16px}.learning-result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.section-head.compact{margin-top:0;align-items:flex-start}.chatgpt-final-card{margin-top:18px;border-color:#cfc8ff;background:linear-gradient(135deg,#fff 55%,#f2efff)}.chatgpt-badge{font-size:.72rem;font-weight:900;border-radius:999px;padding:6px 10px;background:#14121f;color:#fff}.chatgpt-prompt{min-height:240px;background:#fff;line-height:1.55}.five-brokers{grid-template-columns:repeat(2,minmax(0,1fr))}.five-brokers .main-broker{border:2px solid #0b5bd3;box-shadow:0 12px 35px rgba(11,91,211,.12)}
+@media(max-width:1050px){.learning-source-grid{grid-template-columns:1fr 1fr}.five-brokers{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.learning-source-grid,.learning-result-grid,.five-brokers{grid-template-columns:1fr}.news-ai-answer{padding:12px}.chatgpt-prompt{min-height:300px}.learning-source-card{padding:18px}}
+.learning-feed-list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.learning-feed-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}.learning-feed-card h3{font-size:.95rem;line-height:1.5;margin:8px 0 0}.learning-feed-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:.7rem}.learning-feed-card .hero-actions{margin-top:13px}.learning-feed-card .ghost{display:inline-flex;align-items:center;text-decoration:none}.learning-feed-card .primary.small{display:inline-flex;align-items:center}
+@media(max-width:1050px){.learning-feed-list{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.learning-feed-list{grid-template-columns:1fr}.learning-feed-card{padding:16px}}
+
+
+/* v1.12.0: Google Sheets -> NotebookLM long-term learning bridge */
+.notebook-head p{max-width:860px;color:var(--muted);margin:.35rem 0 0}.notebook-flow-card{margin-bottom:16px}.notebook-flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:12px;align-items:stretch}.notebook-flow>div{border:1px solid var(--line);background:#f5f9ff;border-radius:15px;padding:16px;display:grid;gap:5px}.notebook-flow>div b{color:#153d6b}.notebook-flow>div span{color:var(--muted);font-size:.8rem}.notebook-flow>i{display:grid;place-items:center;font-style:normal;color:#7b8ca0;font-size:1.3rem}.notebook-note{margin:14px 0 0;background:#f8fbff;border:1px solid #d6e5f7;border-radius:13px;padding:12px 14px;color:#40566e;font-size:.83rem}.notebook-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:16px}.notebook-status-card{display:flex;flex-direction:column}.notebook-status-card label{display:block;margin-top:12px;font-weight:800}.notebook-status-card label input{margin-top:6px;font-weight:400}.notebook-status-row{display:flex;gap:10px;align-items:flex-start;margin:14px 0}.notebook-status-row small{display:block;color:var(--muted);margin-top:3px}.notebook-data-card,.notebook-life-card,.notebook-setup-help{margin-top:16px}.notebook-source-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.notebook-summary-result{margin-top:13px;padding:13px;border:1px dashed #c9d8ea;border-radius:13px;background:#fbfdff;white-space:pre-wrap;color:#40566e;line-height:1.65}.numbered{padding-left:1.4rem}.numbered li{margin:.45rem 0}.notebook-life-card{border-color:#d6cdf7;background:linear-gradient(135deg,#fff 60%,#f6f2ff)}
+@media(max-width:1050px){.notebook-source-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.notebook-grid,.notebook-source-grid,.notebook-flow{grid-template-columns:1fr}.notebook-flow>i{transform:rotate(90deg);height:18px}.notebook-status-card .hero-actions{display:grid;grid-template-columns:1fr}.notebook-status-card .hero-actions button{width:100%}}
+
+/* v1.13.0: scheduled/manual fresh-news history + radio archive */
+.brief-history-panel{margin-bottom:16px;display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,1.3fr);gap:18px;align-items:center;background:linear-gradient(135deg,#fff 60%,#eef5ff)}
+.brief-history-panel h3{margin:3px 0 5px;font-size:1rem}.brief-history-panel p{margin:0;color:var(--muted);font-size:.78rem;line-height:1.6}
+.brief-history-picker{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center;min-width:0}
+.history-chip{border:1px solid #c3d4e8;background:#fff;color:#244b75;border-radius:999px;padding:8px 11px;font:inherit;font-size:.72rem;font-weight:850;cursor:pointer;white-space:nowrap}
+.history-chip:hover{background:#edf5ff;border-color:#8eb5e5}.history-chip.active{background:#0b5bd3;border-color:#0b5bd3;color:#fff;box-shadow:0 5px 14px rgba(11,91,211,.18)}
+.history-loading{color:var(--muted);font-size:.75rem}.news-history-panel{margin:0 0 16px}.radio-card+.transcript{margin-top:16px}
+@media(max-width:800px){.brief-history-panel{grid-template-columns:1fr;padding:17px}.brief-history-picker{justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px;-webkit-overflow-scrolling:touch}.history-chip{flex:0 0 auto;min-height:40px}.brief-history-panel p{font-size:.74rem}}

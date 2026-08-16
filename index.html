@@ -47,10 +47,12 @@
       <button data-page="lifestyle">☕ 今日の寄り道</button>
       <button data-page="market">📈 市場チャート</button>
       <button data-page="drivers">🧭 相場の因果関係</button>
-      <button data-page="learn">🎓 学習ロードマップ</button>
+      <button data-page="learn">🎓 学習・情報分析</button>
       <button data-page="practice">🧪 模擬判断トレーニング</button>
+      <button data-page="trade">💹 実践ステップ</button>
       <button data-page="journal">📒 投資・FX判断ノート</button>
       <button data-page="terms">📚 経済用語辞典</button>
+      <button data-page="notebook">🧠 NotebookLM連携</button>
       <button data-page="settings">⚙️ 初期設定・同期</button>
     </nav>
     <div class="side-note">実売買の自動発注は行いません。まず「判断→検証→改善」を鍛える設計です。</div>
@@ -65,7 +67,7 @@
       </div>
       <div class="status-group">
         <span class="status-dot offline" id="apiStatus">● 未接続</span>
-        <div class="refresh-control"><span id="lastUpdatedLabel" class="last-updated">最終更新 --:--</span><button class="primary small" id="refreshBtn">↻ 更新</button></div>
+        <div class="refresh-control"><span id="lastUpdatedLabel" class="last-updated">最終更新 --:--</span><button class="primary small" id="refreshBtn">↻ 最新ニュース取得</button></div>
       </div>
     </header>
 
@@ -74,8 +76,8 @@
         <article class="hero-card">
           <div class="eyebrow">今日やること</div>
           <h2>ニュースを読む前に「相場の理由」を考える</h2>
-          <p>①5分ラジオ → ②重要ニュース3本 → ③自分の予想 → ④夜に答え合わせ。これを繰り返します。</p>
-          <div class="hero-actions"><button class="primary" data-goto="brief">▶ 5分ラジオを聞く</button><button class="ghost" data-goto="practice">今日の予想を残す</button></div>
+          <p>①5分ラジオ → ②重要ニュース5本 → ③自分の予想 → ④夜に答え合わせ。慣れたら少額実践へ進みます。</p>
+          <div class="hero-actions"><button class="primary" data-goto="brief">▶ 5分ラジオを聞く</button><button class="ghost" data-goto="practice">今日の予想を残す</button><button class="ghost" data-goto="trade">💹 実践入口</button></div>
         </article>
         <article class="score-card">
           <div class="eyebrow">学習スコア</div>
@@ -105,7 +107,7 @@
       </div>
       <p class="market-caption" id="homeMarketCaption">デモではサンプル値を表示します。FRED接続後は日次データへ切り替わります。</p>
 
-      <div class="section-head"><div><span class="eyebrow">TOP STORIES</span><h2>まず読む3本</h2></div><button class="text-btn" data-goto="news">すべて見る →</button></div>
+      <div class="section-head"><div><span class="eyebrow">TOP STORIES</span><h2>まず読む5本</h2></div><button class="text-btn" data-goto="news">すべて見る →</button></div>
       <div class="news-grid" id="topNews"></div>
 
       <div class="section-head lifestyle-head"><div><span class="eyebrow">MORNING DETOUR</span><h2>☕ 今日の寄り道</h2><p>経済から少し離れて、旅・温泉・地域・暮らしの面白い記事を少しだけ。</p></div><button class="text-btn" data-goto="lifestyle">もっと見る →</button></div>
@@ -128,11 +130,15 @@
     </section>
 
     <section class="page" id="page-brief">
+      <article class="brief-history-panel panel">
+        <div><span class="eyebrow">NEWS ARCHIVE</span><h3>朝・昼・夜・臨時更新を聞き比べる</h3><p>6:30・12:30・18:30ごろの自動更新と、手動で取得したニュースを保存します。選んだ時点のラジオ原稿をそのまま再生できます。</p></div>
+        <div class="brief-history-picker" id="radioHistoryPicker"><span class="history-loading">更新履歴を読み込みます…</span></div>
+      </article>
       <article class="radio-card">
         <div>
-          <div class="eyebrow">MORNING MARKET RADIO</div>
-          <h2>今日の世界・日本経済 5分ダイジェスト</h2>
-          <p id="briefIntro">Geminiが世界と日本の重要ニュースを選び、意味と市場へのつながりまで約5分でまとめます。</p>
+          <div class="eyebrow">MARKET RADIO</div>
+          <h2>朝・昼・夜の世界・日本経済 5分ダイジェスト</h2>
+          <p id="briefIntro">その更新時点の重要ニュースをGeminiが整理し、意味と市場へのつながりまで約5分でまとめます。</p>
         </div>
         <div class="radio-controls">
           <button class="play" id="speakBtn" title="再生 / 一時停止">▶</button>
@@ -164,7 +170,8 @@
     </section>
 
     <section class="page" id="page-news">
-      <div class="section-head"><div><span class="eyebrow">CURATED NEWS</span><h2>重要ニュース</h2></div><div class="filter-row" id="newsFilters"><button data-filter="all" class="active">すべて</button><button data-filter="日本">日本</button><button data-filter="米国">米国</button><button data-filter="世界">世界</button><button data-filter="FX">FX</button></div></div>
+      <div class="section-head"><div><span class="eyebrow">CURATED NEWS</span><h2>重要ニュース</h2><p class="news-policy-note">日本経済・米国経済・世界情勢・為替への波及を優先。朝6:30ごろ・昼12:30ごろ・夕18:30ごろに自動で新規取得。上の「最新ニュース取得」なら、その時点のニュースを臨時取得します。</p></div><div class="filter-row" id="newsFilters"><button data-filter="all" class="active">すべて</button><button data-filter="日本">日本</button><button data-filter="米国">米国</button><button data-filter="世界">世界</button><button data-filter="FX">FX</button></div></div>
+      <article class="brief-history-panel panel news-history-panel"><div><span class="eyebrow">TODAY'S UPDATES</span><h3>今日の更新履歴</h3><p>朝・昼・夜でニュースがどう入れ替わったか確認できます。臨時更新もここに残ります。</p></div><div class="brief-history-picker" id="newsHistoryPicker"><span class="history-loading">更新履歴を読み込みます…</span></div></article>
       <div class="news-list" id="newsList"></div>
     </section>
 
@@ -249,8 +256,29 @@
     </section>
 
     <section class="page" id="page-learn">
-      <div class="section-head"><div><span class="eyebrow">ROADMAP</span><h2>初心者 → 実践者ロードマップ</h2></div><span class="badge">数年かけて育てる</span></div>
+      <div class="section-head"><div><span class="eyebrow">ROADMAP</span><h2>初心者 → 実践者ロードマップ</h2><p>ニュースだけでなく、公式動画・教材・記事を使って「分かったつもり」を減らします。</p></div><span class="badge">毎日少しずつ</span></div>
       <div id="roadmap" class="roadmap"></div>
+
+      <div class="section-head"><div><span class="eyebrow">LATEST OFFICIAL VIDEOS</span><h2>最近の公式学習動画を拾う</h2><p>日本銀行・財務省・金融庁・J-FLECの公式YouTubeから新しい動画候補を取得します。YouTube APIキーは使いません。</p></div><button class="ghost" id="learningFeedRefreshBtn">↻ 学習動画を更新</button></div>
+      <div class="learning-feed-list" id="learningFeedList"><article class="panel">GAS接続後、公式チャンネルの最新動画を表示します。</article></div>
+
+      <div class="section-head"><div><span class="eyebrow">CURATED LEARNING</span><h2>信頼できる学習情報</h2><p>YouTubeは煽り動画より、まず公的・一次情報を土台にします。そこから民間の解説へ広げます。</p></div><span class="badge">無料中心</span></div>
+      <div class="learning-source-grid">
+        <article class="learning-source-card"><span class="source-kind">YouTube・中央銀行</span><h3>日本銀行 BOJchannel</h3><p>金融政策・日銀の役割を一次情報から学ぶ入口。金利と円相場を理解する基礎にします。</p><a class="ghost" href="https://www.youtube.com/user/BOJchannel/videos" target="_blank" rel="noopener noreferrer">公式動画を見る ↗</a></article>
+        <article class="learning-source-card"><span class="source-kind">YouTube・財政</span><h3>財務省 / MOFJapan</h3><p>日本の財政・税・国債などを公式資料と動画で確認します。政策ニュースの背景理解に使います。</p><a class="ghost" href="https://www.youtube.com/user/MOFJapan/playlists" target="_blank" rel="noopener noreferrer">公式動画を見る ↗</a></article>
+        <article class="learning-source-card"><span class="source-kind">YouTube・金融教育</span><h3>J-FLEC</h3><p>中立・公正な金融経済教育を土台に、株・債券・投資信託・資産形成の基礎を学びます。</p><a class="ghost" href="https://www.youtube.com/@j-flec/videos" target="_blank" rel="noopener noreferrer">公式動画を見る ↗</a></article>
+        <article class="learning-source-card"><span class="source-kind">YouTube・制度</span><h3>金融庁チャンネル</h3><p>NISAや資産形成、金融制度を公式側から確認します。制度変更の確認先としても使います。</p><a class="ghost" href="https://www.youtube.com/channel/UCpIgZIDc-ptkZZTvzqlwGQg/videos" target="_blank" rel="noopener noreferrer">公式動画を見る ↗</a></article>
+        <article class="learning-source-card"><span class="source-kind">教材・市場</span><h3>日本取引所グループ（JPX）</h3><p>株式市場・TOPIX・取引所の仕組みを、市場運営者の資料から確認します。</p><a class="ghost" href="https://www.jpx.co.jp/corporate/learning/education/index.html" target="_blank" rel="noopener noreferrer">金融経済教育を見る ↗</a></article>
+        <article class="learning-source-card"><span class="source-kind">無料教材</span><h3>J-FLEC 金融教材</h3><p>動画・マンガ・教材で基礎を補強。分からない用語が続いた時の「戻る場所」にします。</p><a class="ghost" href="https://www.j-flec.go.jp/materials/" target="_blank" rel="noopener noreferrer">無料教材を見る ↗</a></article>
+      </div>
+
+      <article class="panel learning-analyzer">
+        <div class="section-head compact"><div><span class="eyebrow">AI RESOURCE ANALYZER</span><h2>動画・記事をAIで分解</h2><p>気になったYouTube動画や記事URLを貼ると、Geminiが「要点・用語・今日のニュースとの関係・次に確認すること」に分解します。</p></div><span class="badge">Gemini</span></div>
+        <label>動画・記事URL<input id="learningUrl" type="url" placeholder="https://www.youtube.com/watch?v=... または記事URL"></label>
+        <label>補足メモ（任意）<textarea id="learningNote" maxlength="1200" placeholder="動画の気になった発言、字幕の一部、自分の疑問など。YouTubeは字幕を貼ると分析精度が上がります。"></textarea></label>
+        <div class="hero-actions"><button class="primary" id="analyzeLearningBtn">✨ AIで分析する</button><button class="ghost" id="clearLearningBtn">クリア</button></div>
+        <div class="learning-analysis-result" id="learningAnalysisResult"><div class="ai-coach-placeholder"><b>使い方</b><span>①動画・記事を開く → ②URLを貼る → ③AI分析 → ④分からない点だけ追加で学ぶ。YouTubeは動画本文を直接読めない場合があるため、字幕やメモを添えると確実です。</span></div></div>
+      </article>
     </section>
 
     <section class="page" id="page-practice">
@@ -274,6 +302,74 @@
         </article>
       </div>
       <article class="panel"><h3>直近の予想履歴</h3><div id="predictionHistory"></div></article>
+      <article class="panel chatgpt-final-card">
+        <div class="section-head compact"><div><span class="eyebrow">FINAL CHECK</span><h2>🧠 最後はChatGPTにも相談</h2><p>Geminiは各ニュースや教材の「理解」に使い、最終段階では今日のTOP5・市場・自分の予想を1つの相談文にまとめ、別のAI視点で反対材料まで確認します。</p></div><span class="chatgpt-badge">ChatGPT</span></div>
+        <textarea id="chatgptPromptPreview" class="chatgpt-prompt" readonly placeholder="「相談文を作る」を押すと、今日の材料をまとめたプロンプトがここに表示されます。"></textarea>
+        <div class="hero-actions"><button class="primary" id="buildChatgptPromptBtn">相談文を作る</button><button class="ghost" id="openChatgptBtn">コピーしてChatGPTを開く ↗</button></div>
+        <p class="ai-coach-disclaimer">※ ChatGPTへ口座ID・パスワード・個人認証情報は送りません。売買の最終判断は自分で行い、AIには「反対材料・見落とし・確認事項」を探させます。</p>
+      </article>
+    </section>
+
+
+    <section class="page" id="page-trade">
+      <div class="section-head trade-page-head">
+        <div><span class="eyebrow">5 BROKERS / 5 ROLES</span><h2>5社を「役割」で使い分ける</h2><p>口座を5つ持つことと、5社すべてに資金を入れることは別です。練習・超少額・本命・FX・短期研究に役割を分け、必要な段階だけ使います。</p></div>
+        <span class="badge">学習優先</span>
+      </div>
+
+      <article class="panel trade-guide">
+        <div class="trade-path">
+          <div><b>① 0円</b><span>moomooデモ</span><small>株の注文とチャートを見る</small></div><i>→</i>
+          <div><b>② 100円〜</b><span>PayPay証券</span><small>เงินจริงの心理を超少額で体験</small></div><i>→</i>
+          <div><b>③ 本命</b><span>SBI証券</span><small>1株・NISA・長期運用へ</small></div><i>＋</i>
+          <div><b>別コース</b><span>GMO / DMM</span><small>FX・短期売買を必要時だけ</small></div>
+        </div>
+        <p class="trade-caution"><b>基本ルール：</b> 最初は「儲ける」より、ニュース→仮説→売買→振り返りを経験することを優先。信用・FX・CFDなどレバレッジ商品は、デモと損失管理を先に学びます。</p>
+      </article>
+
+      <div class="section-head"><div><span class="eyebrow">SELECTED 5</span><h2>チャッピー選定の5社</h2><p>似た証券会社を並べず、役割が重ならないように選んでいます。</p></div><span class="broker-updated">公式情報確認：2026-08-16</span></div>
+      <div class="broker-grid five-brokers">
+        <article class="broker-card featured">
+          <div class="broker-head"><span class="broker-type">① 学校・デモ・分析</span><span class="broker-stage">今すぐ</span></div>
+          <h3>moomoo証券</h3><p><b>選んだ理由：</b>日本株・米国株のデモ取引と分析画面を、เงินจริงを使わず練習できるから。Market Compassでニュースを読んだ後の「仮説検証場所」にします。</p>
+          <ul><li>入金不要のデモ取引</li><li>日本株・米国株・ETFの学習</li><li>チャート・ニュース分析を深掘り</li></ul>
+          <div class="broker-actions"><a class="primary" href="https://www.moomoo.com/jp/papertrading" target="_blank" rel="noopener noreferrer">デモ取引 ↗</a><a class="ghost" href="https://www.moomoo.com/jp" target="_blank" rel="noopener noreferrer">公式・ログイン ↗</a></div>
+        </article>
+
+        <article class="broker-card featured">
+          <div class="broker-head"><span class="broker-type">② 超少額の実戦</span><span class="broker-stage">100円〜</span></div>
+          <h3>PayPay証券</h3><p><b>選んだ理由：</b>100円から1円単位で買えるため、デモの次に「本物のお金が動く心理」を小さく経験しやすいから。</p>
+          <ul><li>日本株・米国株などを100円から</li><li>少額で予想→結果検証をしやすい</li><li>PayPay利用者にも入りやすい</li></ul>
+          <div class="broker-actions"><a class="primary" href="https://www.paypay-sec.co.jp/login/" target="_blank" rel="noopener noreferrer">ログイン ↗</a><a class="ghost" href="https://www.paypay-sec.co.jp/" target="_blank" rel="noopener noreferrer">公式サイト ↗</a></div>
+        </article>
+
+        <article class="broker-card featured main-broker">
+          <div class="broker-head"><span class="broker-type">③ 本命・長期・NISA</span><span class="broker-stage">将来の中心</span></div>
+          <h3>SBI証券</h3><p><b>選んだ理由：</b>S株で1株から始められ、本格運用・NISA・国内株・米国株へそのまま育てられるため。5社の中の「本拠地」候補です。</p>
+          <ul><li>S株：1株から</li><li>NISA成長投資枠にも対応</li><li>将来資金が増えてもメインにしやすい</li></ul>
+          <div class="broker-actions"><a class="primary" href="https://www.sbisec.co.jp/ETGate" target="_blank" rel="noopener noreferrer">SBIログイン ↗</a><a class="ghost" href="https://www.sbisec.co.jp/ETGate/WPLETmgR001Control?OutSide=on&burl=search_domestic&cat1=domestic&dir=fraction&file=domestic_fraction_01.html&getFlg=on" target="_blank" rel="noopener noreferrer">S株を見る ↗</a></div>
+        </article>
+
+        <article class="broker-card demo-card">
+          <div class="broker-head"><span class="broker-type">④ FX専門</span><span class="broker-stage">デモ→本番</span></div>
+          <h3>GMOクリック証券</h3><p><b>選んだ理由：</b>FXデモから始めて、金利・CPI・雇用統計・日銀/Fedとドル円の関係を反復できるから。株とは別の「為替専門コース」にします。</p>
+          <ul><li>FXデモで注文練習</li><li>ドル円と経済指標の学習に集中</li><li>CFD等は基礎が固まってから</li></ul>
+          <div class="broker-actions"><a class="primary" href="https://www.click-sec.com/corp/guide/fxneo/demo/" target="_blank" rel="noopener noreferrer">FXデモ ↗</a><a class="ghost" href="https://sec-sso.click-sec.com/loginweb/" target="_blank" rel="noopener noreferrer">公式ログイン ↗</a></div>
+        </article>
+
+        <article class="broker-card">
+          <div class="broker-head"><span class="broker-type">⑤ 短期売買研究</span><span class="broker-stage">必要になってから</span></div>
+          <h3>DMM 株</h3><p><b>選んだ理由：</b>日本株・米国株を扱い、PC取引環境もあるため。SBIを長期本命にしたうえで、短期売買を学びたくなった時の「研究口座」に役割を限定します。</p>
+          <ul><li>日本株・米国株</li><li>短期売買の操作研究用</li><li>最初から資金を入れる必要はなし</li></ul>
+          <div class="broker-actions"><a class="primary" href="https://kabu.dmm.com/" target="_blank" rel="noopener noreferrer">公式・ログイン ↗</a><a class="ghost" href="https://kabu.dmm.com/tool/pc_standard/" target="_blank" rel="noopener noreferrer">PC取引画面 ↗</a></div>
+        </article>
+      </div>
+
+      <article class="panel trade-guide broker-choice">
+        <div class="eyebrow">CAPITAL ROUTE</div><h3>5社登録しても、資金は5分割しない</h3>
+        <p><b>moomoo＝0円デモ / PayPay＝数百〜数千円の経験 / SBI＝将来の本命 / GMO＝まずFXデモ / DMM＝必要になるまで0円</b>という配分で十分です。口座ID・パスワードはMARKET COMPASSに保存しません。</p>
+        <div class="hero-actions"><button class="ghost" data-goto="practice">模擬判断へ</button><button class="ghost" data-goto="learn">学習情報へ</button><button class="ghost" data-goto="journal">判断ノートへ</button></div>
+      </article>
     </section>
 
     <section class="page" id="page-journal">
@@ -292,11 +388,66 @@
       <div class="term-grid" id="termGrid"></div>
     </section>
 
+
+    <section class="page" id="page-notebook">
+      <div class="section-head notebook-head"><div><span class="eyebrow">LONG-TERM MEMORY</span><h2>🧠 NotebookLM連携</h2><p>Market Compassの学習履歴を専用Googleスプレッドシートへ自動蓄積し、そのシートをNotebookLMのソースとして使います。</p></div><span class="badge">Market Compass専用</span></div>
+
+      <article class="panel notebook-flow-card">
+        <div class="notebook-flow">
+          <div><b>① Market Compass</b><span>ニュース・予想・AI分析・学習</span></div><i>→</i>
+          <div><b>② Google Sheets</b><span>履歴を自動保存</span></div><i>→</i>
+          <div><b>③ NotebookLM</b><span>数週間〜数年を横断分析</span></div>
+        </div>
+        <p class="notebook-note"><b>最初の1回だけ：</b> 下の「連携用シートを準備」を押した後、スプレッドシートをNotebookLMでソース追加してください。以後はMarket Compass側が同じシートを更新します。</p>
+      </article>
+
+      <div class="notebook-grid">
+        <article class="panel notebook-status-card">
+          <div class="eyebrow">GOOGLE SHEETS</div><h3>専用スプレッドシート</h3>
+          <div class="notebook-status-row"><span id="notebookSheetLed" class="sync-led"></span><div><b id="notebookSheetStatus">未確認</b><small id="notebookSheetDetail">GAS接続後に状態を確認します。</small></div></div>
+          <div class="hero-actions"><button class="primary" id="setupNotebookBtn">連携用シートを準備</button><button class="ghost" id="saveNotebookTodayBtn">今日のTOP5を保存</button><button class="ghost" id="openNotebookSheetBtn">スプレッドシートを開く ↗</button></div>
+        </article>
+
+        <article class="panel notebook-status-card">
+          <div class="eyebrow">NOTEBOOKLM</div><h3>Market Compass専用Notebook</h3>
+          <p>作成したNotebookのURLを1回登録すると、PC・スマホから同じNotebookを開けます。</p>
+          <label>NotebookLM URL<input id="notebookLmUrl" type="url" placeholder="https://notebooklm.google.com/notebook/..."></label>
+          <div class="hero-actions"><button class="primary" id="saveNotebookLmUrlBtn">Notebook URLを保存</button><button class="ghost" id="openNotebookLmBtn">NotebookLMを開く ↗</button></div>
+        </article>
+      </div>
+
+      <article class="panel notebook-data-card">
+        <div class="section-head compact"><div><span class="eyebrow">AUTO ARCHIVE</span><h2>NotebookLMへ渡すデータ</h2><p>元データを残しつつ、NotebookLMが読みやすい専用タブも自動生成します。</p></div></div>
+        <div class="source-grid notebook-source-grid">
+          <div><b>NotebookLM_Source</b><span>1日単位の読みやすい統合テキスト</span></div>
+          <div><b>Top5_News</b><span>毎日の重要ニュース5件</span></div>
+          <div><b>AI_Analysis</b><span>ニュースをGeminiに聞いた履歴</span></div>
+          <div><b>Learning_Log</b><span>YouTube・記事のAI分析</span></div>
+          <div><b>Predictions</b><span>ドル円・日経の自分の予想</span></div>
+          <div><b>Journal</b><span>気づき・学び・次の確認</span></div>
+          <div><b>Trade_Log</b><span>将来のデモ・少額売買記録用</span></div>
+          <div><b>Life_Compass_Summary</b><span>人生Notebookへ渡す月次要約用</span></div>
+        </div>
+      </article>
+
+      <article class="panel notebook-life-card">
+        <div class="section-head compact"><div><span class="eyebrow">LIFE COMPASS BRIDGE</span><h2>Life Compass用の月次要約</h2><p>経済ニュース全文ではなく、「今月何を学び、どんな判断傾向があったか」だけを要約して別タブへ保存します。</p></div><span class="badge">任意</span></div>
+        <div class="hero-actions"><button class="ghost" id="buildLifeCompassSummaryBtn">今月の要約を作成</button></div>
+        <div id="lifeCompassSummaryResult" class="notebook-summary-result"><small>必要なときだけ作成すればOKです。</small></div>
+      </article>
+
+      <article class="panel notebook-setup-help">
+        <div class="eyebrow">FIRST SETUP</div><h3>NotebookLM側で最初にすること</h3>
+        <ol class="clean numbered"><li>「スプレッドシートを開く」でMarket Compass専用シートを確認</li><li>NotebookLMを開いてMarket Compass専用Notebookを新規作成</li><li>ソース追加 → Google Drive → このスプレッドシートを選択</li><li>作成したNotebookのURLをこの画面へ保存</li></ol>
+        <p class="ai-coach-disclaimer">※ Market CompassはNotebookLMのログイン情報を保存しません。Googleアカウント側の権限で利用します。</p>
+      </article>
+    </section>
+
     <section class="page" id="page-settings">
       <div class="section-head"><div><span class="eyebrow">ONE-TIME SETUP</span><h2>初期設定・PC/スマホ同期</h2></div><span class="badge">基本はPCで1回だけ</span></div>
       <article class="panel setup-card setup-main">
         <h3>普段はこの画面を触らなくてOKです</h3>
-        <p>ニュース取得・AI音声・学習データの保存先をGASにまとめます。設定後は、スマホではホーム・ラジオ・ニュース・練習を使うだけです。</p>
+        <p>ニュース取得・AI分析・学習データの保存先をGASにまとめます。設定後は、スマホではホーム・ラジオ・ニュース・練習を使うだけです。</p>
         <div class="sync-state-row"><span class="sync-led" id="syncLed"></span><div><b id="syncTitle">デモモード</b><small id="syncDetail">まだクラウド同期していません。</small></div></div>
         <label>GAS WebアプリURL<input id="backendUrl" placeholder="https://script.google.com/macros/s/.../exec"></label>
         <label>同期コード<input id="syncToken" type="password" autocomplete="off" placeholder="GASの setupMarketCompass で発行されるコード"></label>
@@ -343,7 +494,7 @@
       </article>
       <article class="panel">
         <h3>このOSが使うデータ</h3>
-        <div class="source-grid"><div><b>Currents / GDELT</b><span>日本・世界のニュース</span></div><div><b>FRED</b><span>経済指標・日経平均・ドル円</span></div><div><b>Gemini</b><span>ニュース要約・チャートAI先生</span></div><div><b>Google AI音声</b><span>朝の経済ラジオ</span></div></div>
+        <div class="source-grid"><div><b>Currents / GDELT</b><span>日本・世界のニュース</span></div><div><b>FRED</b><span>経済指標・日経平均・ドル円</span></div><div><b>Gemini</b><span>ニュース要約・チャートAI先生</span></div><div><b>ブラウザ音声</b><span>無料の日本語読み上げ</span></div></div>
       </article>
     </section>
   </main>
