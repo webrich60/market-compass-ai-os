@@ -315,50 +315,24 @@ function drawMarketChart(el,points,symbol,mini){
  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(symbol==='NIKKEI'?'日経平均':'ドル円')} ${esc(state.marketPeriod)} の値動き"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="currentColor" stop-opacity=".18"/><stop offset="100%" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>${grid}<path d="${area}" fill="url(#${gid})"/><path d="${path}" class="market-line"/><circle cx="${last[0]}" cy="${last[1]}" r="${mini?4:5}" class="market-dot"><title>${esc(points.at(-1).date)} ${esc(marketFormat(symbol,Number(points.at(-1).value)))}</title></circle>${mini?'':`<text x="${pad}" y="18" class="chart-label">${esc(marketFormat(symbol,max0))}</text><text x="${pad}" y="${H-8}" class="chart-label">${esc(marketFormat(symbol,min0))}</text>`}</svg>`;
 }
 
-function setTradingViewSymbolParam_(symbol){
- try{
-  const u=new URL(location.href);
-  if(u.searchParams.get('tvwidgetsymbol')!==symbol){
-   u.searchParams.set('tvwidgetsymbol',symbol);
-   history.replaceState({},'',u.pathname+u.search+u.hash);
-  }
- }catch(e){}
-}
 function renderTradingViewLive(symbol){
  const el=$('#tradingviewLiveChart');if(!el)return;
- const key=symbol==='USDJPY'?'USDJPY':'NIKKEI';state.liveMarketSymbol=key;
+ const key=symbol==='USDJPY'?'USDJPY':'NIKKEI';
+ state.liveMarketSymbol=key;
  $$('.live-symbols button').forEach(b=>b.classList.toggle('active',b.dataset.liveMarket===key));
 
  const cfg=key==='USDJPY'
-  ?{symbol:'FX_IDC:USDJPY',title:'USD/JPY',credit:'USD/JPY'}
-  :{symbol:'TVC:NI225',title:'日経225',credit:'Japan 225'};
+  ?{symbol:'FX_IDC:USDJPY',title:'USD/JPY',credit:'USD/JPY',creditHref:'https://www.tradingview.com/symbols/USDJPY/?exchange=FX_IDC'}
+  :{symbol:'TVC:NI225',title:'日経225',credit:'Japan 225',creditHref:'https://www.tradingview.com/symbols/TVC-NI225/'};
 
- // TradingViewは単一銘柄ウィジェットで tvwidgetsymbol を優先できるため、
- // ページ側のパラメータも現在選択中の銘柄へ同期してAAPL既定値への落下を防ぐ。
- setTradingViewSymbolParam_(cfg.symbol);
-
- el.innerHTML='<div class="live-chart-loading">'+esc(cfg.title)+' のライブ参考チャートを読み込みます…</div>';
-
- const wrap=document.createElement('div');
- wrap.className='tradingview-widget-container';
- wrap.style.height='100%';
- wrap.style.width='100%';
-
- const widget=document.createElement('div');
- widget.className='tradingview-widget-container__widget';
- widget.style.height='calc(100% - 32px)';
- widget.style.width='100%';
- wrap.appendChild(widget);
-
- const credit=document.createElement('div');
- credit.className='tradingview-widget-copyright';
- const creditHref=key==='USDJPY'
-  ?'https://www.tradingview.com/symbols/USDJPY/?exchange=FX_IDC'
-  :'https://www.tradingview.com/symbols/TVC-NI225/';
- credit.innerHTML='<a href="'+creditHref+'" rel="noopener nofollow" target="_blank">'+esc(cfg.credit)+' chart</a><span>&nbsp;by TradingView</span>';
- wrap.appendChild(credit);
-
- const config={
+ /*
+  * v1.15.2
+  * TradingViewの外部埋め込みスクリプトを親ページへ動的追加する方式では、
+  * 一部環境で設定JSONが読まれず既定のAAPLへ落ちる事象が確認された。
+  * そこで公式の「静的HTML埋め込み」と同じ構造を独立iframe(srcdoc)内に作り、
+  * scriptタグ本文へsymbolを直接固定してから読み込ませる。
+  */
+ const tvConfig={
   autosize:true,
   symbol:cfg.symbol,
   interval:'30',
@@ -383,21 +357,31 @@ function renderTradingViewLive(symbol){
   studies:[]
  };
 
- const script=document.createElement('script');
- script.type='text/javascript';
- script.async=true;
- // 先に設定JSONを入れ、その後にsrcを指定してからDOMへ追加する。
- // TradingView公式の埋め込みコードと同じ構造にする。
- script.innerHTML=JSON.stringify(config);
- script.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+ const frame=document.createElement('iframe');
+ frame.className='tradingview-live-frame';
+ frame.title=cfg.title+' ライブ参考チャート';
+ frame.loading='eager';
+ frame.referrerPolicy='no-referrer-when-downgrade';
+ frame.style.cssText='display:block;width:100%;height:100%;min-height:520px;border:0;background:#07111c;';
 
- script.onerror=()=>{
-  el.innerHTML='<div class="live-chart-loading">TradingViewを読み込めませんでした。通信状態を確認してください。</div>';
- };
+ const configJson=JSON.stringify(tvConfig).replace(/</g,'\\u003c');
+ frame.srcdoc='<!doctype html>'
+  +'<html lang="ja"><head><meta charset="utf-8">'
+  +'<meta name="viewport" content="width=device-width,initial-scale=1">'
+  +'<style>html,body{margin:0;width:100%;height:100%;background:#07111c;overflow:hidden}'
+  +'.tradingview-widget-container{height:100%;width:100%}'
+  +'.tradingview-widget-container__widget{height:calc(100% - 32px);width:100%}'
+  +'.tradingview-widget-copyright{height:32px;box-sizing:border-box;padding:7px 10px;text-align:right;font:12px Arial,sans-serif;color:#9db0c4}'
+  +'.tradingview-widget-copyright a{color:#9db0c4;text-decoration:none}</style></head><body>'
+  +'<div class="tradingview-widget-container">'
+  +'<div class="tradingview-widget-container__widget"></div>'
+  +'<div class="tradingview-widget-copyright"><a href="'+cfg.creditHref+'" rel="noopener nofollow" target="_blank">'+cfg.credit+' chart</a><span>&nbsp;by TradingView</span></div>'
+  +'<script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>'
+  +configJson
+  +'<\/script></div></body></html>';
 
  el.innerHTML='';
- el.appendChild(wrap);
- wrap.appendChild(script);
+ el.appendChild(frame);
 }
 
 
@@ -1021,3 +1005,4 @@ boot();
 // v1.13.0: 手動更新をリアルタイム新規取得へ変更。定時/臨時ニュース履歴と各回ラジオ再生を追加。
 // v1.14.0: 証券会社5社をホームへ常時表示。公式YouTube学習情報を朝・昼・夜に自動収集し、ホーム/学習ページへ表示。
 // v1.15.1: TradingView銘柄固定を正式統合。tvwidgetsymbol同期、タブレットGAS JSONP再試行を追加。
+// v1.15.2: TradingViewを独立iframe(srcdoc)の静的埋め込みへ変更し、AAPL既定値への落下を遮断。
