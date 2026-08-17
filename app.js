@@ -322,8 +322,8 @@ function renderTradingViewLive(symbol){
  $$('.live-symbols button').forEach(b=>b.classList.toggle('active',b.dataset.liveMarket===key));
 
  const cfg=key==='USDJPY'
-  ?{symbol:'FX_IDC:USDJPY',title:'USD/JPY',credit:'USD/JPY',creditHref:'https://www.tradingview.com/symbols/USDJPY/?exchange=FX_IDC'}
-  :{symbol:'TVC:NI225',title:'日経225',credit:'Japan 225',creditHref:'https://www.tradingview.com/symbols/TVC-NI225/'};
+  ?{symbol:'FX:USDJPY',title:'USD/JPY',credit:'USD/JPY',creditHref:'https://www.tradingview.com/symbols/FX-USDJPY/'}
+  :{symbol:'INDEX:NKY',title:'日経225',credit:'Japan 225',creditHref:'https://www.tradingview.com/symbols/INDEX-NKY/'};
 
  /*
   * v1.15.2
@@ -1006,3 +1006,4 @@ boot();
 // v1.14.0: 証券会社5社をホームへ常時表示。公式YouTube学習情報を朝・昼・夜に自動収集し、ホーム/学習ページへ表示。
 // v1.15.1: TradingView銘柄固定を正式統合。tvwidgetsymbol同期、タブレットGAS JSONP再試行を追加。
 // v1.15.2: TradingViewを独立iframe(srcdoc)の静的埋め込みへ変更し、AAPL既定値への落下を遮断。
+// v1.15.3: TradingViewウィジェット公式例に合わせ、日経225=INDEX:NKY、ドル円=FX:USDJPYへ変更。
