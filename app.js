@@ -315,21 +315,89 @@ function drawMarketChart(el,points,symbol,mini){
  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(symbol==='NIKKEI'?'日経平均':'ドル円')} ${esc(state.marketPeriod)} の値動き"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="currentColor" stop-opacity=".18"/><stop offset="100%" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>${grid}<path d="${area}" fill="url(#${gid})"/><path d="${path}" class="market-line"/><circle cx="${last[0]}" cy="${last[1]}" r="${mini?4:5}" class="market-dot"><title>${esc(points.at(-1).date)} ${esc(marketFormat(symbol,Number(points.at(-1).value)))}</title></circle>${mini?'':`<text x="${pad}" y="18" class="chart-label">${esc(marketFormat(symbol,max0))}</text><text x="${pad}" y="${H-8}" class="chart-label">${esc(marketFormat(symbol,min0))}</text>`}</svg>`;
 }
 
+function setTradingViewSymbolParam_(symbol){
+ try{
+  const u=new URL(location.href);
+  if(u.searchParams.get('tvwidgetsymbol')!==symbol){
+   u.searchParams.set('tvwidgetsymbol',symbol);
+   history.replaceState({},'',u.pathname+u.search+u.hash);
+  }
+ }catch(e){}
+}
 function renderTradingViewLive(symbol){
  const el=$('#tradingviewLiveChart');if(!el)return;
  const key=symbol==='USDJPY'?'USDJPY':'NIKKEI';state.liveMarketSymbol=key;
  $$('.live-symbols button').forEach(b=>b.classList.toggle('active',b.dataset.liveMarket===key));
+
  const cfg=key==='USDJPY'
-  ?{symbol:'FX_IDC:USDJPY',title:'USD/JPY'}
-  :{symbol:'TVC:NI225',title:'Japan 225'};
+  ?{symbol:'FX_IDC:USDJPY',title:'USD/JPY',credit:'USD/JPY'}
+  :{symbol:'TVC:NI225',title:'日経225',credit:'Japan 225'};
+
+ // TradingViewは単一銘柄ウィジェットで tvwidgetsymbol を優先できるため、
+ // ページ側のパラメータも現在選択中の銘柄へ同期してAAPL既定値への落下を防ぐ。
+ setTradingViewSymbolParam_(cfg.symbol);
+
  el.innerHTML='<div class="live-chart-loading">'+esc(cfg.title)+' のライブ参考チャートを読み込みます…</div>';
- const wrap=document.createElement('div');wrap.className='tradingview-widget-container';
- const widget=document.createElement('div');widget.className='tradingview-widget-container__widget';wrap.appendChild(widget);
- const credit=document.createElement('div');credit.className='tradingview-widget-copyright';credit.innerHTML='<a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank">Market data</a><span>&nbsp;by TradingView</span>';wrap.appendChild(credit);
- const script=document.createElement('script');script.type='text/javascript';script.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';script.async=true;
- script.text=JSON.stringify({autosize:true,symbol:cfg.symbol,interval:'30',timezone:'Asia/Tokyo',theme:'dark',style:'1',locale:'ja',allow_symbol_change:false,calendar:false,details:false,hotlist:false,hide_side_toolbar:true,save_image:false,backgroundColor:'rgba(7,17,28,1)',gridColor:'rgba(38,57,77,0.35)',support_host:'https://www.tradingview.com'});
- script.onerror=()=>{el.innerHTML='<div class="live-chart-loading">TradingViewを読み込めませんでした。通信状態を確認してください。</div>'};
- el.innerHTML='';el.appendChild(wrap);wrap.appendChild(script);
+
+ const wrap=document.createElement('div');
+ wrap.className='tradingview-widget-container';
+ wrap.style.height='100%';
+ wrap.style.width='100%';
+
+ const widget=document.createElement('div');
+ widget.className='tradingview-widget-container__widget';
+ widget.style.height='calc(100% - 32px)';
+ widget.style.width='100%';
+ wrap.appendChild(widget);
+
+ const credit=document.createElement('div');
+ credit.className='tradingview-widget-copyright';
+ const creditHref=key==='USDJPY'
+  ?'https://www.tradingview.com/symbols/USDJPY/?exchange=FX_IDC'
+  :'https://www.tradingview.com/symbols/TVC-NI225/';
+ credit.innerHTML='<a href="'+creditHref+'" rel="noopener nofollow" target="_blank">'+esc(cfg.credit)+' chart</a><span>&nbsp;by TradingView</span>';
+ wrap.appendChild(credit);
+
+ const config={
+  autosize:true,
+  symbol:cfg.symbol,
+  interval:'30',
+  timezone:'Asia/Tokyo',
+  theme:'dark',
+  style:'1',
+  locale:'ja',
+  allow_symbol_change:false,
+  calendar:false,
+  details:false,
+  hotlist:false,
+  hide_side_toolbar:true,
+  hide_top_toolbar:false,
+  hide_legend:false,
+  hide_volume:false,
+  save_image:false,
+  withdateranges:false,
+  backgroundColor:'rgba(7,17,28,1)',
+  gridColor:'rgba(38,57,77,0.35)',
+  watchlist:[],
+  compareSymbols:[],
+  studies:[]
+ };
+
+ const script=document.createElement('script');
+ script.type='text/javascript';
+ script.async=true;
+ // 先に設定JSONを入れ、その後にsrcを指定してからDOMへ追加する。
+ // TradingView公式の埋め込みコードと同じ構造にする。
+ script.innerHTML=JSON.stringify(config);
+ script.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+
+ script.onerror=()=>{
+  el.innerHTML='<div class="live-chart-loading">TradingViewを読み込めませんでした。通信状態を確認してください。</div>';
+ };
+
+ el.innerHTML='';
+ el.appendChild(wrap);
+ wrap.appendChild(script);
 }
 
 
@@ -870,10 +938,29 @@ function restoreLatestBrief(){
 }
 
 function gasRequest(url,ok,fail,timeoutMs=20000){
- // Primary: JSONP (works well on GitHub Pages and most browsers).
- // Fallback: hidden GAS iframe + postMessage for browsers that reject the
- // ContentService redirect as an external script.
- jsonp(url,ok,()=>bridgeRequest(url,ok,fail,timeoutMs),Math.min(timeoutMs,12000));
+ // v1.15.1: Android/タブレットのGAS ContentServiceリダイレクト遅延に対応。
+ // JSONPを従来より長く待ち、キャッシュバスター付きで1回だけ再試行してからbridgeへ移る。
+ if(!url){fail(new Error('gas-url-empty'));return}
+ let settled=false;
+ const success=data=>{
+  if(settled)return;
+  settled=true;
+  try{ok(data)}catch(e){fail(e)}
+ };
+ const failure=err=>{
+  if(settled)return;
+  settled=true;
+  fail(err);
+ };
+ const firstWait=Math.max(22000,Math.min(Number(timeoutMs)||22000,45000));
+ jsonp(url,success,()=>{
+  if(settled)return;
+  const retryUrl=url+(url.includes('?')?'&':'?')+'_mc_retry='+Date.now();
+  jsonp(retryUrl,success,()=>{
+   if(settled)return;
+   bridgeRequest(retryUrl,success,failure,Math.max(30000,Number(timeoutMs)||30000));
+  },15000);
+ },firstWait);
 }
 function jsonp(url,ok,fail,timeoutMs=12000){
  const cb='mc_cb_'+Date.now()+'_'+Math.random().toString(36).slice(2),s=document.createElement('script');let timer=null,done=false;
@@ -933,3 +1020,4 @@ boot();
 
 // v1.13.0: 手動更新をリアルタイム新規取得へ変更。定時/臨時ニュース履歴と各回ラジオ再生を追加。
 // v1.14.0: 証券会社5社をホームへ常時表示。公式YouTube学習情報を朝・昼・夜に自動収集し、ホーム/学習ページへ表示。
+// v1.15.1: TradingView銘柄固定を正式統合。tvwidgetsymbol同期、タブレットGAS JSONP再試行を追加。
